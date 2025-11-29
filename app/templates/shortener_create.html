@@ -1,0 +1,30 @@
+<!--shortener_create.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Shorten URL{% endblock %}
+
+{% block content %}
+    <section class="shortener-create-container">
+        <h1>URL Shortener</h1>
+        <p>Generate a secure, short link to share with others.</p>
+
+        <form method="POST" action="{{ url_for('shortener.create') }}">
+
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.original_url.label(class="form-label") }}
+                {{ form.original_url(class="form-input", placeholder="e.g., https://www.yourlongaddress.com") }}
+
+                {% for error in form.original_url.errors %}
+                    <span class="error" style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </section>
+{% endblock %}

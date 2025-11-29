@@ -1,0 +1,125 @@
+<!--base.html-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro-Hub | {% block title %}Page Title{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <div id="loading-overlay" aria-hidden="true">
+        <div class="spinner"></div>
+    </div>
+
+    <header id="app-header" role="banner">
+        <div id="fireworks-controls">
+            <button id="toggleColorButton" class="icon-btn" aria-label="Switch Theme">
+                <span role="img" aria-hidden="true">🔦</span>
+            </button>
+            <button id="gravityToggleButton" class="icon-btn" aria-label="Toggle Fireworks Gravity">
+                <span role="img" aria-hidden="true">⚙️</span>
+            </button>
+            <button id="toggleFireworksButton" class="icon-btn" aria-label="Turn off fireworks animation">
+                <span role="img" aria-hidden="true">🎆</span>
+            </button>
+        </div>
+
+        <button class="hamburger" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mobile-nav-overlay">
+            <span></span><span></span><span></span>
+        </button>
+
+        <nav role="navigation" aria-label="Main navigation" class="desktop-nav-wrapper">
+            <ul class="desktop-nav">
+                <li><a href="{{ url_for('main.home') }}" class="{{ 'active' if active_page == 'home' else '' }}">Home</a></li>
+                <li><a href="{{ url_for('main.about') }}" class="{{ 'active' if active_page == 'about' else '' }}">About</a></li>
+                <li class="nav-divider" aria-hidden="true">|</li>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('blog.blog_index') }}" class="{{ 'active' if active_page == 'blog' else '' }}">Blog</a></li>
+                    <li><a href="{{ url_for('tasks.index') }}" class="{{ 'active' if active_page == 'tasks' else '' }}">Tasks</a></li>
+                    <li><a href="{{ url_for('shortener.create') }}" class="{{ 'active' if active_page == 'shortener' else '' }}">Shortener</a></li>
+                    <li><a href="{{ url_for('downloader.download') }}" class="{{ 'active' if active_page == 'downloader' else '' }}">Downloader</a></li>
+                    <li><a href="{{ url_for('downloader.my_files') }}" class="{{ 'active' if active_page == 'my_files' else '' }}">My Downloads</a></li>
+                    {# Deleted Chatbot Desktop Nav Link #}
+                    <li class="nav-divider" aria-hidden="true">|</li>
+                    <li><a href="{{ url_for('auth.user_profile', username=current_user.username) }}" class="{{ 'active' if active_page == 'profile' else '' }}">Profile</a></li>
+                    <li class="user-info" aria-live="polite">
+                        Welcome, <strong>{{ current_user.username }}</strong>
+                        <a href="{{ url_for('auth.logout') }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}" class="{{ 'active' if active_page == 'login' else '' }}">Login</a></li>
+                    <li><a href="{{ url_for('auth.register') }}" class="{{ 'active' if active_page == 'register' else '' }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <div id="mobile-nav-overlay" class="mobile-nav-overlay" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
+        <nav role="navigation">
+            <ul>
+                <li><a href="{{ url_for('main.home') }}" class="{{ 'active' if active_page == 'home' else '' }}">Home</a></li>
+                <li><a href="{{ url_for('main.about') }}" class="{{ 'active' if active_page == 'about' else '' }}">About</a></li>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('blog.blog_index') }}" class="{{ 'active' if active_page == 'blog' else '' }}">Blog</a></li>
+                    <li><a href="{{ url_for('tasks.index') }}" class="{{ 'active' if active_page == 'tasks' else '' }}">Tasks</a></li>
+                    <li><a href="{{ url_for('shortener.create') }}" class="{{ 'active' if active_page == 'shortener' else '' }}">Shortener</a></li>
+                    <li><a href="{{ url_for('downloader.download') }}" class="{{ 'active' if active_page == 'downloader' else '' }}">Downloader</a></li>
+                    <li><a href="{{ url_for('downloader.my_files') }}" class="{{ 'active' if active_page == 'my_files' else '' }}">My Downloads</a></li>
+                    {# Deleted Chatbot Mobile Nav Link #}
+                    <li><a href="{{ url_for('auth.user_profile', username=current_user.username) }}" class="{{ 'active' if active_page == 'profile' else '' }}">Profile</a></li>
+                    <li class="user-info" aria-live="polite">
+                        <p>Welcome, <strong>{{ current_user.username }}</strong></p>
+                        <a href="{{ url_for('auth.logout') }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}" class="{{ 'active' if active_page == 'login' else '' }}">Login</a></li>
+                    <li><a href="{{ url_for('auth.register') }}" class="{{ 'active' if active_page == 'register' else '' }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+
+    <main id="main-content-wrapper" role="main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashes-container" role="alert">
+                    <ul class="flashes">
+                        {% for category, message in messages %}
+                            <li class="flash-{{ category }}">{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer id="app-footer" role="contentinfo">
+        <p>&copy; 2025 Micro-Utility Hub | Built with Flask & SQLAlchemy</p>
+    </footer>
+
+    <canvas id="fireworksCanvas" aria-hidden="true"></canvas>
+    <div id="message-box" aria-live="polite"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+
+    {# Deleted Chatbot Widget HTML Block #}
+
+    <script type="module" src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/fireworks.js') }}" defer></script>
+
+    {# Deleted Chatbot Inline JS Block #}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

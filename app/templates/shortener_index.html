@@ -1,0 +1,59 @@
+<!--shortener_index.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Manage Links{% endblock %}
+
+{% block content %}
+    <section class="shortener-index-container">
+        <h1>Your Short Links</h1>
+        <hr>
+
+        <p><a class="form-create" href="{{ url_for('shortener.create') }}">Create a New Short Link</a></p>
+
+        {% if links %}
+            <table class="links-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <caption>List of shortened URLs</caption>
+                <thead>
+                    <tr>
+                        <th class="short-code-col" style="padding: 10px; width: 20%; text-align: left;">Short Code</th>
+                        <th class="original-url-col" style="padding: 10px; width: 50%; text-align: left;">Original URL</th>
+                        <th class="clicks-col" style="padding: 10px; width: 15%; text-align: center;">Clicks</th>
+                        <th class="actions-col" style="padding: 10px; width: 15%; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for link in links %}
+                    <tr>
+                        <td class="short-code">
+                            <a href="{{ url_for('shortener.redirect_to_url', code=link.short_url) }}" target="_blank">
+                                /r/{{ link.short_url }}
+                            </a>
+                        </td>
+
+                        <td class="original-url">
+                            {{ link.url }}
+                        </td>
+
+                        <td class="clicks">
+                            {{ link.clicks }}
+                        </td>
+
+                        <td class="actions">
+                            <form action="{{ url_for('shortener.delete_link', link_id=link.id) }}" method="POST" style="display: inline;">
+                                <button type="submit"
+                                        onclick="return confirm('WARNING: Delete link /r/{{ link.short_url }}?')"
+                                        class="delete-btn">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>You haven't shortened any links yet. Start by creating one above!</p>
+        {% endif %}
+    </section>
+{% endblock %}

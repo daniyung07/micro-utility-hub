@@ -1,0 +1,51 @@
+<!--login.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+    <section class="login-container">
+        <h1>Login</h1>
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {# Added placeholder #}
+                {{ form.email(class="form-input", placeholder="Enter your email") }}
+                {% for error in form.email.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                <div style="position: relative;">
+                    {{ form.password(class="form-input", id="login-password-field", placeholder="Enter password") }}
+                    <span class="password-toggle" data-target="login-password-field">👁️</span>
+                </div>
+                {% for error in form.password.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    Login
+                </button>
+            </div>
+
+            <p class="forgot-password-link" style="text-align: center; margin-top: 15px;">
+                <a href="{{ url_for('auth.reset_request') }}">Forgot Password?</a>
+            </p>
+            <p class="register-link" style="text-align: center; margin-top: 10px;"> {# Adjusted margin #}
+                Don't have an account? <a href="{{ url_for('auth.register') }}">Sign up here</a>
+            </p>
+        </form>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/auth.js') }}" defer></script>
+{% endblock %}

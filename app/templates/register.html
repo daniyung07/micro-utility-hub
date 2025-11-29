@@ -1,0 +1,67 @@
+<!--register.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+    <section class="register-container">
+        <h1>Create Account</h1>
+        <form method="POST" action="{{ url_for('auth.register') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-input") }}
+                {% for error in form.username.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-input") }}
+                {% for error in form.email.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                <div style="position: relative;">
+                    {{ form.password(class="form-input", id="password-field", placeholder="Enter your password") }}
+                    <span class="password-toggle" data-target="password-field">👁️</span>
+                </div>
+
+                <div id="password-strength-meter" style="margin-top: 5px; height: 10px; background: rgba(255,255,255,0.2); border-radius: 5px;">
+                    <div id="password-strength-bar" style="width: 0%; height: 100%; border-radius: 5px; transition: width 0.3s ease;"></div>
+                </div>
+                <span id="password-strength-text" style="font-size: 0.8em; margin-top: 2px; display: block;"></span>
+                {% for error in form.password.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.confirm_password.label(class="form-label") }}
+                <div style="position: relative;">
+                    {{ form.confirm_password(class="form-input", id="confirm-password-field", placeholder="Confirm password") }}
+                    <span class="password-toggle" data-target="confirm-password-field">👁️</span>
+                </div>
+                {% for error in form.confirm_password.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    Register
+                </button>
+            </div>
+        </form>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/auth.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,36 @@
+<!--create_post.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Create New Post{% endblock %}
+
+{% block content %}
+    <section class="create-post-container">
+        <h1>New Blog Post</h1>
+
+        <form method="POST" action="{{ url_for('blog.new_post') }}">
+
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-input") }}
+                {% for error in form.title.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.content.label(class="form-label") }}
+                {{ form.content(class="form-input", rows=10) }}
+                {% for error in form.content.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </section>
+{% endblock %}

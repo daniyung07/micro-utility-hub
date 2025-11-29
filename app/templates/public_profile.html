@@ -1,0 +1,37 @@
+<!--public_profile.html-->
+
+{% extends "base.html" %}
+
+{% block title %}{{ profile_user.username }}'s Profile{% endblock %}
+
+{% block content %}
+    <section class="profile-container" style="text-align: center;">
+        <header>
+            <h1>{{ profile_user.username }}'s Profile</h1>
+            <hr>
+
+            <img src="{{ url_for('static', filename='profile_pics/' + profile_user.image_file) }}?v={{ range(10000) | random }}"
+                 alt="{{ profile_user.username }}'s Profile Picture"
+                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--link-color); margin-bottom: 20px;">
+        </header>
+
+        <address class="user-details-list" style="text-align: left; max-width: 300px; margin: 0 auto;">
+            <p><strong>Username:</strong> {{ profile_user.username }}</p>
+            <p><strong>Email:</strong> {{ profile_user.email }}</p>
+            <p><strong>Country:</strong> {{ profile_user.country or 'Not specified' }}</p>
+            <p><strong>State:</strong> {{ profile_user.state or 'Not specified' }}</p>
+        </address>
+
+        <hr>
+
+        {% if current_user.is_authenticated and current_user.username == profile_user.username %}
+            <p>
+                <a href="{{ url_for('auth.profile') }}" class="btn btn-secondary">
+                    Edit Account Settings
+                </a>
+            </p>
+        {% endif %}
+
+        <p><a href="{{ url_for('main.home') }}">Back to Dashboard</a></p>
+    </section>
+{% endblock %}

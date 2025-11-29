@@ -1,0 +1,45 @@
+<!--home.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <section class="dashboard-content">
+        <h1>Welcome to Your Micro-Utility Hub</h1>
+        <p>Your application is ready! Use the navigation bar above to manage your data.</p>
+
+        <section>
+            <h2>Your Modules</h2>
+            <p>Each module below is protected and secured by your login credentials.</p>
+
+            <ul class="module-list">
+                <li><a href="{{ url_for('blog.blog_index') }}">**Blog Module**</a> 📝: Write, edit, and read your personal posts.</li>
+                <li><a href="{{ url_for('tasks.index') }}">**Task Manager**</a> ✔️: Track your private to-do list in a table format.</li>
+                <li><a href="{{ url_for('shortener.create') }}">**URL Shortener**</a> 🔗: Generate secure, short links for sharing.</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Recent Posts</h2>
+            <div class="module-list">
+                {% for post in posts %}
+                <article>
+                    <ul style="list-style: none; padding-left: 0;">
+                        <li class="post-data">
+                            <a href="{{ url_for('blog.view_post', post_id=post.id) }}">
+                                {{ post.title }}
+                            </a>
+                            <span style="font-size: 0.9em;">(Posted by **{{ post.post_author.username }}** on <time datetime="{{ post.date_posted.isoformat() }}">{{ post.date_posted.strftime('%B %d, %Y') }}</time>)</span>
+                        </li>
+                    </ul>
+                </article>
+                {% else %}
+                <p>No recent posts to display. Start writing!</p>
+                {% endfor %}
+            </div>
+        </section>
+    </section>
+{% endblock %}

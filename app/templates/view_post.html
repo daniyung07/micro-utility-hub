@@ -1,0 +1,23 @@
+<!--view_post.html-->
+
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+    <article class="blog-post-view">
+        <header>
+            <h1>{{ post.title }}</h1>
+            <hr>
+            <p class="post-meta">
+                Posted by {{ post.post_author.username }} on <time datetime="{{ post.date_posted.isoformat() }}">{{ post.date_posted.strftime('%B %d, %Y') }}</time>
+            </p>
+        </header>
+
+        <div class="post-body">
+            <p>
+                {{ post.content }}
+            </p>
+        </div>
+    </article>
+{% endblock %}

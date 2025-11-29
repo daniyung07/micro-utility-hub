@@ -1,0 +1,91 @@
+<!--profile.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Account Settings{% endblock %}
+
+{% block content %}
+    <section class="edit-profile-container">
+        <h1>Update Profile</h1>
+        <p>Update your personal information and profile picture.</p>
+        <hr>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="{{ url_for('static', filename='profile_pics/' + current_user.image_file) }}?v={{ range(10000) | random }}"
+                 alt="{{ current_user.username }}'s Current Profile Picture"
+                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--link-color);">
+            <h2>@{{ current_user.username }}</h2>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data" id="profile-form">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {# FIX: Add explicit value attribute #}
+                {{ form.username(class="form-input", value=current_user.username) }}
+                {% for error in form.username.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {# FIX: Add explicit value attribute #}
+                {{ form.email(class="form-input", value=current_user.email) }}
+                {% for error in form.email.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.country.label(class="form-label") }}
+                {# FIX: Add explicit value attribute #}
+                {{ form.country(class="form-input", value=current_user.country or '') }} {# Use 'or ""' for potentially None values #}
+            </div>
+
+            <div class="form-group">
+                {{ form.state.label(class="form-label") }}
+                {# FIX: Add explicit value attribute #}
+                {{ form.state(class="form-input", value=current_user.state or '') }} {# Use 'or ""' for potentially None values #}
+            </div>
+
+            {# ... image upload and submit button ... #}
+             <div class="form-group profile-image-upload-group">
+                <label class="form-label">Update Profile Image</label>
+                <small> (Current File: {{ current_user.image_file }})</small>
+                <input type="file" id="image-upload-input" name="image_upload_input" accept="image/*" class="form-input">
+                <input type="hidden" id="cropped-image-data-uri" name="image_data_uri">
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </section>
+
+     <div id="crop-modal">
+        <div class="cropper-modal-content">
+            <div class="cropper-container">
+                <img id="image-to-crop" alt="Image to crop">
+            </div>
+            <div class="cropper-controls" style="display: none;"> {# Ensure controls are initially hidden #}
+                <div class="cropper-buttons">
+                    <button type="button" class="btn" data-action="save">Save</button>
+                    <button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>
+                </div>
+                <select id="aspect-ratio-select" class="form-input" style="width: auto; margin: 15px 0;">
+                    <option value="1">Square (1:1)</option>
+                    <option value="16/9">Landscape (16:9)</option>
+                    <option value="4/3">Classic (4:3)</option>
+                    <option value="NaN">Free (No restriction)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {# Ensure app.js (which contains cropper logic) is loaded #}
+    <script type="module" src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+{% endblock %}

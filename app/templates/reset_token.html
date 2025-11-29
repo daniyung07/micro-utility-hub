@@ -1,0 +1,48 @@
+<!--reset_token.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Reset Your Password{% endblock %}
+
+{% block content %}
+    <section class="reset-token-container" style="max-width: 400px; margin: 0 auto; padding: 20px; background: rgba(0, 0, 0, 0.6); border-radius: 10px; box-shadow: 0 5px 15px var(--shadow-color);">
+        <h1>Reset Your Password</h1>
+        <p style="margin-bottom: 20px; color: rgba(255, 255, 255, 0.8);">Please enter your new password below.</p>
+        <hr>
+
+        <form method="POST" action=""> {# Action is determined by the current URL with the token #}
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                <div style="position: relative;">
+                    {{ form.password(class="form-input", id="reset-password-field", placeholder="Enter new password") }}
+                    <span class="password-toggle" data-target="reset-password-field">👁️</span>
+                </div>
+                {% for error in form.password.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.confirm_password.label(class="form-label") }}
+                <div style="position: relative;">
+                    {{ form.confirm_password(class="form-input", id="reset-confirm-password-field", placeholder="Confirm new password") }}
+                    <span class="password-toggle" data-target="reset-confirm-password-field">👁️</span>
+                </div>
+                {% for error in form.confirm_password.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions" style="margin-top: 25px;">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </section>
+{% endblock %}
+
+{# Include auth.js for the password toggle functionality #}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/auth.js') }}" defer></script>
+{% endblock %}
