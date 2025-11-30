@@ -1,6 +1,6 @@
 # app/__init__.py
 
-import os
+import os  # <--- Ensure os is imported
 import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -22,7 +22,15 @@ def create_app():
 
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
+
+    # CRITICAL FIX: Use DATABASE_URL from environment for production
+    # Fallback to SQLite for local development only
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+        'DATABASE_URL',
+        'sqlite:///data.db'
+    )
+    # END CRITICAL FIX
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # --- RESTORED: Initialize extensions with the app ---
@@ -35,9 +43,11 @@ def create_app():
     # --- Database Initialization ---
     from . import models
     with app.app_context():
+        # NOTE: db.create_all() only creates tables if they don't exist.
+        # For a new PostgreSQL DB, this will create your tables.
         db.create_all()
 
-    # --- Register Blueprints (MUST BE LAST) ---
+        # --- Register Blueprints (MUST BE LAST) ---
 
     # 1. Import all blueprints
     from .blueprints.main.routes import main as main_bp
