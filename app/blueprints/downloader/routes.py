@@ -43,7 +43,7 @@ def get_base_ydl_opts():
         'no_check_certificates': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web']
+                'player_client': ['android_creator', 'creator', 'android']
             }
         }
     }
