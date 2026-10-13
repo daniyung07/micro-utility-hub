@@ -34,6 +34,19 @@ def create_app():
     db_url = os.environ.get('DATABASE_URL', 'sqlite:///data.db')
     if db_url and db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
+
+    # Verify database connectivity; if remote host is dead/expired, fallback to SQLite to prevent crashing
+    if db_url and not db_url.startswith('sqlite:'):
+        try:
+            from sqlalchemy import create_engine
+            test_engine = create_engine(db_url)
+            with test_engine.connect():
+                pass
+            test_engine.dispose()
+        except Exception as e:
+            app.logger.warning(f"DATABASE_URL is unreachable ({e}). Falling back to local SQLite.")
+            db_url = 'sqlite:///data.db'
+
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
