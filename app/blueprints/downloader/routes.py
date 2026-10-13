@@ -36,14 +36,16 @@ def get_ffmpeg_dir():
 
 
 def get_base_ydl_opts():
-    """Returns baseline options for YoutubeDL with creator player clients to bypass datacenter bot checks."""
+    """Returns baseline options for YoutubeDL with robust player client rotation to bypass datacenter bot checks."""
     opts = {
         'quiet': True,
         'no_warnings': True,
         'no_check_certificates': True,
+        'geo_bypass': True,
+        'socket_timeout': 30,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android_creator', 'creator']
+                'player_client': ['android', 'android_creator', 'web']
             }
         }
     }
