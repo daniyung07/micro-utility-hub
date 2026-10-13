@@ -284,8 +284,16 @@ def download():
             flash(f'Ready! Choose your download quality for "{video_title}".', 'info')
 
         except Exception as e:
-            err_msg = str(e).split(';')[0].replace('ERROR:', '').strip()
-            flash(f'Error fetching video data: {err_msg}', 'error')
+            err_raw = str(e)
+            if "not a bot" in err_raw.lower() or "bot" in err_raw.lower():
+                err_msg = (
+                    "YouTube anti-bot challenge: YouTube actively restricts cloud datacenter IPs (like Render/AWS). "
+                    "You can download media from SoundCloud or Vimeo directly on this server, "
+                    "or run the hub locally on your home network where YouTube downloads work smoothly without IP blocks."
+                )
+            else:
+                err_msg = err_raw.split(';')[0].replace('ERROR:', '').strip()
+            flash(f'Notice: {err_msg}', 'error')
             current_app.logger.error(f"Downloader processing error: {e}")
 
         return render_template(
