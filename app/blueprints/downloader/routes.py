@@ -35,6 +35,27 @@ def get_ffmpeg_dir():
     return None
 
 
+def get_cookie_file():
+    """Returns path to cookies file if available via env var or file."""
+    cookie_content = os.environ.get('YOUTUBE_COOKIES')
+    if cookie_content:
+        import tempfile
+        cookie_path = os.path.join(tempfile.gettempdir(), 'yt_cookies.txt')
+        with open(cookie_path, 'w', encoding='utf-8') as f:
+            f.write(cookie_content)
+        return cookie_path
+
+    paths = [
+        os.path.join(current_app.root_path, 'cookies.txt'),
+        os.path.join(current_app.instance_path, 'cookies.txt'),
+        os.path.join(current_app.root_path, '..', 'cookies.txt'),
+    ]
+    for p in paths:
+        if os.path.exists(p) and os.path.getsize(p) > 20:
+            return os.path.abspath(p)
+    return None
+
+
 def get_base_ydl_opts():
     """Returns baseline options for YoutubeDL with robust player client rotation to bypass datacenter bot checks."""
     opts = {
@@ -45,10 +66,14 @@ def get_base_ydl_opts():
         'socket_timeout': 30,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'android_creator', 'web']
+                'player_client': ['android_creator', 'android', 'web']
             }
         }
     }
+    cookie_file = get_cookie_file()
+    if cookie_file:
+        opts['cookiefile'] = cookie_file
+
     ffmpeg_dir = get_ffmpeg_dir()
     if ffmpeg_dir:
         opts['ffmpeg_location'] = ffmpeg_dir
