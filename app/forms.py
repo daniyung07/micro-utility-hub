@@ -58,5 +58,5 @@ class ShortenerForm(FlaskForm):
     submit = SubmitField('Shorten')
 
 class YouTubeDownloaderForm(FlaskForm):
-    youtube_url = StringField('YouTube Video URL', validators=[DataRequired(), URL(message='Please enter a valid YouTube URL.')])
-    submit = SubmitField('Download Video')
+    youtube_url = StringField('Video URL', validators=[DataRequired(), URL(message='Please enter a valid video URL.')])
+    submit = SubmitField('Fetch Video')

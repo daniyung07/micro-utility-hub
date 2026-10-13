@@ -20,16 +20,21 @@ load_dotenv(os.path.join(basedir, '..', '.env'))
 def create_app():
     app = Flask(__name__)
 
+    # Ensure ffmpeg binaries are in PATH if static-ffmpeg is available
+    try:
+        import static_ffmpeg
+        static_ffmpeg.add_paths()
+    except Exception:
+        pass
+
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
 
-    # CRITICAL FIX: Use DATABASE_URL from environment for production
-    # Fallback to SQLite for local development only
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-        'DATABASE_URL',
-        'sqlite:///data.db'
-    )
-    # END CRITICAL FIX
+    # Handle PostgreSQL URL dialect fix (Render/Heroku use postgres:// which SQLAlchemy 2.0 rejects)
+    db_url = os.environ.get('DATABASE_URL', 'sqlite:///data.db')
+    if db_url and db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

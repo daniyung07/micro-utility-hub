@@ -27,5 +27,6 @@ SQLAlchemy==2.0.44
 typing_extensions==4.15.0
 urllib3==2.5.0
 Werkzeug==3.1.4
-WTForms==3.2.1
-yt-dlp==2025.11.12
+wtforms==3.2.1
+yt-dlp>=2025.10.0
+static-ffmpeg>=2.5
