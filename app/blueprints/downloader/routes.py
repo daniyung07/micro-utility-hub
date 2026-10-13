@@ -35,37 +35,21 @@ def get_ffmpeg_dir():
     return None
 
 
-def get_cookie_file():
-    paths = [
-        os.path.join(current_app.root_path, 'cookies.txt'),
-        os.path.join(current_app.instance_path, 'cookies.txt'),
-        os.path.join(current_app.root_path, '..', 'cookies.txt'),
-    ]
-    for p in paths:
-        if os.path.exists(p) and os.path.getsize(p) > 20:
-            return p
-    return None
-
-
 def get_base_ydl_opts():
-    """Returns baseline options for YoutubeDL with reliable player client fallbacks."""
+    """Returns baseline options for YoutubeDL with creator player clients to bypass datacenter bot checks."""
     opts = {
         'quiet': True,
         'no_warnings': True,
         'no_check_certificates': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android_creator', 'creator', 'android', 'web']
+                'player_client': ['android_creator', 'creator']
             }
         }
     }
     ffmpeg_dir = get_ffmpeg_dir()
     if ffmpeg_dir:
         opts['ffmpeg_location'] = ffmpeg_dir
-
-    cookie_file = get_cookie_file()
-    if cookie_file:
-        opts['cookiefile'] = cookie_file
 
     return opts
 
