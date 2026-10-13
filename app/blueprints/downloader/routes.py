@@ -1,12 +1,10 @@
 # downloader/routes.py
 
 import os
-import sys
+import re
 import shutil
 import threading
-import subprocess
-import json
-import re
+import yt_dlp
 
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
@@ -22,25 +20,8 @@ downloader = Blueprint('downloader', __name__, template_folder='templates')
 # In-memory storage for download progress
 download_tasks = {}
 
-# --- Regex for parsing yt-dlp output ---
-PROGRESS_RE = re.compile(
-    r"\[download\]\s+(?P<percent>[\d\.]+)%(?:\s+of\s+~?\s*(?P<size>[\d\.]+\w+))?(?:\s+at\s+(?P<speed>[\d\.]+\w+/s))?"
-)
 
-# Standard extractor arguments for bypassing bot verification on YouTube
-EXTRACTOR_ARGS = [
-    '--extractor-args', 'youtube:player_client=ios,android,web',
-    '--no-check-certificates',
-    '--no-playlist'
-]
-
-
-def get_ytdlp_cmd():
-    """Always invoke yt-dlp using the active Python interpreter module."""
-    return [sys.executable, '-m', 'yt_dlp']
-
-
-def get_ffmpeg_args():
+def get_ffmpeg_dir():
     """Detect FFmpeg dynamically, with static-ffmpeg fallback for cloud environments like Render."""
     try:
         import static_ffmpeg
@@ -50,123 +31,119 @@ def get_ffmpeg_args():
 
     ffmpeg_bin = shutil.which('ffmpeg')
     if ffmpeg_bin:
-        return ['--ffmpeg-location', os.path.dirname(ffmpeg_bin)]
-    return []
+        return os.path.dirname(ffmpeg_bin)
+    return None
 
 
-def get_cookie_args():
-    """Only pass cookie file if it actually exists and has content."""
+def get_base_ydl_opts():
+    """Returns baseline options for YoutubeDL with reliable player client fallbacks."""
+    opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'no_check_certificates': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        }
+    }
+    ffmpeg_dir = get_ffmpeg_dir()
+    if ffmpeg_dir:
+        opts['ffmpeg_location'] = ffmpeg_dir
+
     cookies_path = os.path.join(current_app.instance_path, 'cookies.txt')
     if os.path.exists(cookies_path) and os.path.getsize(cookies_path) > 20:
-        return ['--cookies', cookies_path]
-    return []
+        opts['cookiefile'] = cookies_path
+
+    return opts
 
 
-# --- Background Download Function (using yt-dlp) ---
+# --- Background Download Function (using native yt-dlp API) ---
 def download_process_thread(app, url, format_id, task_key, filepath):
-    """Downloads a video stream in a separate thread using yt-dlp."""
+    """Downloads a video stream in a separate thread using the native yt-dlp Python API."""
     global download_tasks
 
     with app.app_context():
-        ffmpeg_args = get_ffmpeg_args()
-        cookie_args = get_cookie_args()
+        ffmpeg_dir = get_ffmpeg_dir()
 
         # Format selector: if ffmpeg is available, combine video+audio.
-        # Otherwise fallback to best pre-merged stream so it never crashes without ffmpeg.
-        if ffmpeg_args:
+        # Otherwise fallback to best pre-merged stream so it never crashes.
+        if ffmpeg_dir:
             if format_id == 'best':
-                format_selector = 'bestvideo+bestaudio/best[ext=mp4]/best'
+                format_selector = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best'
             else:
                 format_selector = f"{format_id}+bestaudio/best[ext=mp4]/{format_id}/best"
         else:
-            format_selector = f"best[ext=mp4]/{format_id}/best"
+            if format_id == 'best':
+                format_selector = 'best[ext=mp4]/best'
+            else:
+                format_selector = f"{format_id}/best[ext=mp4]/best"
+
+        def progress_hook(d):
+            task_info = download_tasks.get(task_key, {})
+            if task_info.get('cancel_requested'):
+                raise Exception("Download cancelled by user.")
+
+            status = d.get('status')
+            if status == 'downloading':
+                downloaded = d.get('downloaded_bytes') or 0
+                total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
+                if total > 0:
+                    percent = int((downloaded / total) * 100)
+                else:
+                    raw_p = d.get('_percent_str', '0%')
+                    match = re.search(r'([\d.]+)', raw_p)
+                    percent = int(float(match.group(1))) if match else 0
+
+                speed_str = d.get('_speed_str', '')
+                task_info['progress'] = min(max(percent, 0), 98)
+                task_info['speed_str'] = speed_str.strip() or 'Downloading...'
+                task_info['status'] = 'downloading'
+
+            elif status == 'finished':
+                task_info['status'] = 'merging'
+                task_info['speed_str'] = 'Finalizing and merging...'
+                task_info['progress'] = 99
+
+        ydl_opts = get_base_ydl_opts()
+        ydl_opts.update({
+            'format': format_selector,
+            'outtmpl': filepath,
+            'merge_output_format': 'mp4',
+            'progress_hooks': [progress_hook],
+            'noplaylist': True
+        })
 
         try:
-            command = (
-                get_ytdlp_cmd()
-                + ['-f', format_selector, '-o', filepath, '--progress', '--newline', '-q', '--no-warnings']
-                + ffmpeg_args
-                + cookie_args
-                + EXTRACTOR_ARGS
-                + ['--merge-output-format', 'mp4', url]
-            )
-
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                encoding='utf-8',
-                errors='replace',
-                bufsize=1,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            )
-
-            if task_key in download_tasks:
-                download_tasks[task_key]['process'] = process
-
-            current_app.logger.info(f"Started yt-dlp process for {task_key}")
-
-            for line in iter(process.stdout.readline, ''):
-                if not line:
-                    break
-
-                task_info = download_tasks.get(task_key, {})
-                if task_info.get('cancel_requested'):
-                    process.terminate()
-                    raise Exception("Download cancelled by user.")
-
-                line_clean = line.strip()
-
-                if "[Merger]" in line_clean or "Merging formats" in line_clean:
-                    task_info['status'] = 'merging'
-                    task_info['speed_str'] = 'Merging audio & video...'
-                    task_info['progress'] = 98
-                    continue
-
-                match = PROGRESS_RE.search(line_clean)
-                if match:
-                    data = match.groupdict()
-                    percentage = float(data.get('percent', 0))
-                    speed = data.get('speed') or 'Downloading...'
-
-                    if task_key in download_tasks:
-                        download_tasks[task_key]['progress'] = int(percentage)
-                        download_tasks[task_key]['speed_str'] = speed
-                        download_tasks[task_key]['status'] = 'downloading'
-
-            process.stdout.close()
-            return_code = process.wait()
-            current_app.logger.info(f"yt-dlp for {task_key} finished with exit code {return_code}")
+            current_app.logger.info(f"Starting download for {task_key} with format {format_selector}")
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
 
             task_info = download_tasks.get(task_key, {})
             if task_info.get('cancel_requested'):
                 raise Exception("Download cancelled by user.")
 
-            if return_code == 0:
-                # Resolve actual filepath in case yt-dlp saved under a different extension (e.g. .mkv, .webm)
-                actual_filepath = filepath
-                if not os.path.exists(actual_filepath):
-                    base_no_ext, _ = os.path.splitext(filepath)
-                    parent_dir = os.path.dirname(filepath)
-                    if os.path.exists(parent_dir):
-                        candidates = [
-                            os.path.join(parent_dir, f) for f in os.listdir(parent_dir)
-                            if os.path.join(parent_dir, f).startswith(base_no_ext) and not f.endswith('.part')
-                        ]
-                        if candidates:
-                            actual_filepath = candidates[0]
+            # Resolve actual filepath
+            actual_filepath = filepath
+            if not os.path.exists(actual_filepath):
+                base_no_ext, _ = os.path.splitext(filepath)
+                parent_dir = os.path.dirname(filepath)
+                if os.path.exists(parent_dir):
+                    candidates = [
+                        os.path.join(parent_dir, f) for f in os.listdir(parent_dir)
+                        if os.path.join(parent_dir, f).startswith(base_no_ext) and not f.endswith('.part')
+                    ]
+                    if candidates:
+                        actual_filepath = candidates[0]
 
-                if os.path.exists(actual_filepath):
-                    task_info['filepath'] = actual_filepath
-                    task_info['download_name'] = os.path.basename(actual_filepath)
-                    task_info['status'] = 'complete'
-                    task_info['progress'] = 100
-                    task_info['speed_str'] = "Complete"
-                else:
-                    raise Exception("Download finished, but output file could not be located on the server.")
+            if os.path.exists(actual_filepath):
+                task_info['filepath'] = actual_filepath
+                task_info['download_name'] = os.path.basename(actual_filepath)
+                task_info['status'] = 'complete'
+                task_info['progress'] = 100
+                task_info['speed_str'] = "Complete"
             else:
-                raise Exception(f"Downloader failed with exit code {return_code}")
+                raise Exception("Download finished, but output file could not be located on the server.")
 
         except Exception as e:
             current_app.logger.error(f"Download thread error for {task_key}: {e}")
@@ -182,7 +159,7 @@ def download_process_thread(app, url, format_id, task_key, filepath):
                             pass
                 else:
                     task_info['status'] = 'error'
-                    task_info['error_message'] = str(e)
+                    task_info['error_message'] = str(e).split(';')[0]
                     task_info['speed_str'] = 'Error'
 
 
@@ -198,49 +175,53 @@ def download():
         url = form.youtube_url.data.strip()
 
         try:
-            cmd = (
-                get_ytdlp_cmd()
-                + ['--no-update', '--no-call-home', '--dump-json']
-                + EXTRACTOR_ARGS
-                + get_cookie_args()
-                + [url]
-            )
+            ydl_opts = get_base_ydl_opts()
+            ydl_opts['skip_download'] = True
+            ydl_opts['noplaylist'] = True
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                encoding='utf-8',
-                errors='replace',
-                check=True,
-                timeout=90
-            )
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                data = ydl.extract_info(url, download=False)
 
-            data = json.loads(result.stdout)
+            if not data:
+                raise Exception("Could not retrieve video information.")
+
             video_title = data.get('title', 'Downloaded Video')
             video_id = str(data.get('id', 'video'))
 
-            # Gather formats: support both separate video streams and pre-merged progressive streams
+            # Gather formats: ignore storyboards (mhtml)
             formats = data.get('formats', [])
             if not formats and data.get('url'):
                 formats = [data]
 
             candidates = [
                 f for f in formats
-                if f.get('vcodec') != 'none' or (not f.get('vcodec') and f.get('ext') in ('mp4', 'webm', 'mkv'))
+                if f.get('ext') != 'mhtml' and (f.get('vcodec') != 'none' or f.get('height') or f.get('ext') in ('mp4', 'webm', 'mkv'))
             ]
-            if not candidates and formats:
-                candidates = formats
-            elif not candidates:
-                candidates = [{'format_id': 'best', 'resolution': 'Best Available', 'ext': 'mp4'}]
 
-            # Sort best resolution / height first
+            # Sort best height/quality first
             candidates.sort(
                 key=lambda x: (x.get('height') or 0, x.get('tbr') or 0, x.get('filesize') or 0),
                 reverse=True
             )
 
-            # Deduplicate by resolution to keep dropdown intuitive
+            # 1. Always offer 'Best Available Quality' as the first option
+            raw_key_best = f"{video_id}_best_{current_user.id}"
+            task_key_best = "".join(c for c in raw_key_best if c.isalnum() or c in ('_', '-'))
+            initiate_url_best = url_for(
+                'downloader.initiate_download',
+                format_id='best',
+                task_key=task_key_best,
+                url=url,
+                title=video_title
+            )
+            download_options.append({
+                'resolution': 'Best Available Quality (MP4)',
+                'url': initiate_url_best,
+                'task_key': task_key_best,
+                'size_mb': 0
+            })
+
+            # 2. Add individual resolution options (deduplicated)
             seen_resolutions = set()
             for stream in candidates:
                 format_id = str(stream.get('format_id', 'best'))
@@ -256,7 +237,6 @@ def download():
                     continue
                 seen_resolutions.add(res_key)
 
-                # Clean task key
                 raw_key = f"{video_id}_{format_id}_{current_user.id}"
                 task_key = "".join(c for c in raw_key if c.isalnum() or c in ('_', '-'))
 
@@ -272,24 +252,17 @@ def download():
                 size_mb = round(file_size / (1024 * 1024), 2) if file_size else 0
 
                 download_options.append({
-                    'resolution': resolution,
+                    'resolution': f"{resolution} ({ext})",
                     'url': initiate_url,
                     'task_key': task_key,
                     'size_mb': size_mb
                 })
 
-            if download_options:
-                flash(f'Ready! Choose your download quality for "{video_title}".', 'info')
-            else:
-                flash('No downloadable video streams found for this URL.', 'error')
+            flash(f'Ready! Choose your download quality for "{video_title}".', 'info')
 
-        except subprocess.TimeoutExpired:
-            flash('Request timed out while fetching video data. Please try again.', 'error')
-        except subprocess.CalledProcessError as e:
-            flash('Error fetching video data. Please check the URL or try a different link.', 'error')
-            current_app.logger.error(f"yt-dlp JSON error: {e.stderr}")
         except Exception as e:
-            flash(f'An unexpected error occurred: {e}', 'error')
+            err_msg = str(e).split(';')[0].replace('ERROR:', '').strip()
+            flash(f'Error fetching video data: {err_msg}', 'error')
             current_app.logger.error(f"Downloader processing error: {e}")
 
         return render_template(
@@ -411,12 +384,6 @@ def cancel_download(task_key):
 
     if task.get('status') in ('downloading', 'starting', 'merging'):
         task['cancel_requested'] = True
-        process = task.get('process')
-        if process:
-            try:
-                process.terminate()
-            except Exception as e:
-                current_app.logger.warning(f"Error terminating process for {task_key}: {e}")
         return jsonify({'status': 'cancel_requested'})
 
     return jsonify({'status': task.get('status', 'unknown')})
