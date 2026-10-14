@@ -95,9 +95,11 @@ def get_base_ydl_opts():
         'no_warnings': True,
         'no_check_certificates': True,
         'geo_bypass': True,
+        'source_address': '0.0.0.0',
+        'force_ipv4': True,
         'socket_timeout': 35,
-        'retries': 12,
-        'fragment_retries': 12,
+        'retries': 15,
+        'fragment_retries': 15,
         'file_access_retries': 5,
         'extractor_retries': 5,
         'continuedl': True,
@@ -105,7 +107,7 @@ def get_base_ydl_opts():
         'extractor_args': {
             'youtube': {
                 'player_client': ['android_sdkless', 'android_vr', 'android'],
-                'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
+                'player_skip': ['webpage', 'web', 'web_creator', 'mweb', 'tv', 'web_safari']
             }
         }
     }
@@ -271,15 +273,15 @@ def download():
                 client_tiers = [
                     {
                         'player_client': ['android_sdkless', 'android_vr', 'android'],
-                        'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
+                        'player_skip': ['webpage', 'web', 'web_creator', 'mweb', 'tv', 'web_safari']
                     },
                     {
                         'player_client': ['android'],
-                        'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
+                        'player_skip': ['webpage', 'web', 'web_creator', 'mweb', 'tv', 'web_safari']
                     },
                     {
                         'player_client': ['android_vr'],
-                        'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
+                        'player_skip': ['webpage', 'web', 'web_creator', 'mweb', 'tv', 'web_safari']
                     }
                 ]
                 last_extract_err = None
