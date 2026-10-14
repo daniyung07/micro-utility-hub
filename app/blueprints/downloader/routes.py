@@ -35,9 +35,41 @@ def get_ffmpeg_dir():
     return None
 
 
+def cleanup_partial_files(filepath):
+    """Removes partial and temporary files created by yt-dlp."""
+    try:
+        if not filepath:
+            return
+        base_no_ext, _ = os.path.splitext(filepath)
+        parent_dir = os.path.dirname(filepath)
+        if os.path.exists(parent_dir):
+            for fname in os.listdir(parent_dir):
+                fpath = os.path.join(parent_dir, fname)
+                if fpath.startswith(base_no_ext) and fname.endswith(('.part', '.ytdl', '.temp', '.mp4.part', '.m4a.part')):
+                    try:
+                        os.remove(fpath)
+                    except OSError:
+                        pass
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
+    except Exception:
+        pass
+
+
 def get_cookie_file():
     """Returns path to cookies file if available via env var or file."""
+    import base64
     cookie_content = os.environ.get('YOUTUBE_COOKIES')
+    b64_content = os.environ.get('YOUTUBE_COOKIES_BASE64')
+    if b64_content and not cookie_content:
+        try:
+            cookie_content = base64.b64decode(b64_content).decode('utf-8', errors='ignore')
+        except Exception:
+            pass
+
     if cookie_content:
         import tempfile
         cookie_path = os.path.join(tempfile.gettempdir(), 'yt_cookies.txt')
@@ -57,19 +89,30 @@ def get_cookie_file():
 
 
 def get_base_ydl_opts():
-    """Returns baseline options for YoutubeDL with robust player client rotation to bypass datacenter bot checks."""
+    """Returns baseline options for YoutubeDL with robust player client rotation, chunking and proxy support."""
     opts = {
         'quiet': True,
         'no_warnings': True,
         'no_check_certificates': True,
         'geo_bypass': True,
-        'socket_timeout': 30,
+        'socket_timeout': 35,
+        'retries': 12,
+        'fragment_retries': 12,
+        'file_access_retries': 5,
+        'extractor_retries': 5,
+        'continuedl': True,
+        'http_chunk_size': 10485760,  # 10MB discrete chunking avoids socket read timeouts on large streams
         'extractor_args': {
             'youtube': {
                 'player_client': ['android_creator', 'android', 'web']
             }
         }
     }
+
+    proxy_url = os.environ.get('PROXY_URL')
+    if proxy_url:
+        opts['proxy'] = proxy_url
+
     cookie_file = get_cookie_file()
     if cookie_file:
         opts['cookiefile'] = cookie_file
@@ -119,13 +162,16 @@ def download_process_thread(app, url, format_id, task_key, filepath):
                     percent = int(float(match.group(1))) if match else 0
 
                 speed_str = d.get('_speed_str', '')
+                eta_str = d.get('_eta_str', '')
                 task_info['progress'] = min(max(percent, 0), 98)
                 task_info['speed_str'] = speed_str.strip() or 'Downloading...'
+                task_info['eta_str'] = eta_str.strip() or ''
                 task_info['status'] = 'downloading'
 
             elif status == 'finished':
                 task_info['status'] = 'merging'
                 task_info['speed_str'] = 'Finalizing and merging...'
+                task_info['eta_str'] = 'Almost done'
                 task_info['progress'] = 99
 
         ydl_opts = get_base_ydl_opts()
@@ -134,7 +180,12 @@ def download_process_thread(app, url, format_id, task_key, filepath):
             'outtmpl': filepath,
             'merge_output_format': 'mp4',
             'progress_hooks': [progress_hook],
-            'noplaylist': True
+            'noplaylist': True,
+            'socket_timeout': 45,
+            'retries': 15,
+            'fragment_retries': 15,
+            'buffersize': 1024 * 1024,
+            'http_chunk_size': 10485760,
         })
 
         try:
@@ -165,25 +216,27 @@ def download_process_thread(app, url, format_id, task_key, filepath):
                 task_info['status'] = 'complete'
                 task_info['progress'] = 100
                 task_info['speed_str'] = "Complete"
+                task_info['eta_str'] = "Done"
             else:
                 raise Exception("Download finished, but output file could not be located on the server.")
 
         except Exception as e:
             current_app.logger.error(f"Download thread error for {task_key}: {e}")
+            cleanup_partial_files(filepath)
             if task_key in download_tasks:
                 task_info = download_tasks[task_key]
                 if "cancelled by user" in str(e).lower():
                     task_info['status'] = 'cancelled'
                     task_info['speed_str'] = 'Cancelled'
-                    if os.path.exists(filepath):
-                        try:
-                            os.remove(filepath)
-                        except OSError:
-                            pass
+                    task_info['eta_str'] = ''
                 else:
                     task_info['status'] = 'error'
-                    task_info['error_message'] = str(e).split(';')[0]
+                    err_clean = str(e).split(';')[0]
+                    if "timed out" in err_clean.lower():
+                        err_clean = "Network stream timed out. Please retry or choose a specific lower resolution."
+                    task_info['error_message'] = err_clean
                     task_info['speed_str'] = 'Error'
+                    task_info['eta_str'] = ''
 
 
 @downloader.route('/download', methods=['GET', 'POST'])
@@ -361,7 +414,7 @@ def initiate_download(format_id, task_key):
 @downloader.route('/status/<string:task_key>')
 @login_required
 def download_status(task_key):
-    """Provides the current status, progress, and speed for a download task."""
+    """Provides the current status, progress, speed, and ETA for a download task."""
     global download_tasks
     task = download_tasks.get(task_key)
 
@@ -371,7 +424,9 @@ def download_status(task_key):
     response_data = {
         'status': task.get('status', 'starting'),
         'progress': task.get('progress', 0),
-        'speed_str': task.get('speed_str', '')
+        'speed_str': task.get('speed_str', ''),
+        'eta_str': task.get('eta_str', ''),
+        'download_name': task.get('download_name', '')
     }
 
     if task.get('status') == 'complete':

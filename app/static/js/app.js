@@ -272,11 +272,11 @@ function initCropper() {
 function initLoadingOverlay() {
     const loadingOverlay = document.querySelector('#loading-overlay');
     if (loadingOverlay) {
-        loadingOverlay.classList.remove('hidden');
+        // Fast, smooth fade-out once DOM is loaded
+        loadingOverlay.classList.add('fade-out');
         setTimeout(() => {
-            loadingOverlay.classList.add('fade-out');
-            setTimeout(() => loadingOverlay.classList.add('hidden'), 200);
-        }, 1000); // Show for 1 second
+            loadingOverlay.classList.add('hidden');
+        }, 180);
     }
 }
 
@@ -291,5 +291,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3.2. Feature-Specific Initializations
     initForms();
     initCropper();
-    initChatbotWidget(); // <-- Chatbot JS is now called here
 });

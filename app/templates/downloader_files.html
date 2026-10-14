@@ -6,50 +6,68 @@
 
 {% block content %}
     <section class="downloads-container">
-        <h1>My Downloaded Files</h1>
-        <p>This list shows all videos you have successfully downloaded and saved to the server.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+            <div>
+                <h1>My Saved Media</h1>
+                <p>Manage and download videos and audio files preserved on your hub storage.</p>
+            </div>
+            <a href="{{ url_for('downloader.download') }}" class="btn btn-primary">
+                <span>➕</span> New Download
+            </a>
+        </div>
         <hr>
 
         {% if files %}
             <table class="tasks-table" style="width: 100%;">
-                <caption>Your saved video files</caption>
+                <caption>Files stored in your private storage</caption>
                 <thead>
                     <tr>
-                        <th style="width: 50%;">Filename</th>
-                        <th style="width: 15%; text-align: center;">File Size</th>
-                        <th style="width: 35%; text-align: center;">Actions</th>
+                        <th style="width: 52%;">Filename</th>
+                        <th style="width: 18%; text-align: center;">Size</th>
+                        <th style="width: 30%; text-align: center;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for file in files %}
                     <tr>
-                        <td data-label="Filename" style="word-break: break-all;">
-                            {{ file.name }}
+                        <td data-label="Filename" style="word-break: break-all; font-weight: 500;">
+                            <span style="margin-right: 6px;">🎬</span> {{ file.name }}
                         </td>
-                        <td data-label="File Size" style="text-align: center;">
+                        <td data-label="File Size" style="text-align: center; color: var(--link-color); font-weight: 600;">
                             {{ file.size_mb }} MB
                         </td>
                         <td data-label="Actions" style="text-align: center;">
-                            <a href="{{ url_for('downloader.get_file', filename=file.name) }}" class="btn btn-secondary" style="width: auto; padding: 5px 10px; font-size: 0.9em; margin-right: 5px;">Download</a>
+                            <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                                <a href="{{ url_for('downloader.get_file', filename=file.name) }}" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.88rem;">
+                                    <span>💾</span> Save
+                                </a>
 
-                            <form action="{{ url_for('downloader.delete_file', filename=file.name) }}" method="POST" style="display: inline;">
-                                <button type="submit"
-                                        onclick="return confirm('Are you sure you want to permanently delete \'{{ file.name }}\'?')"
-                                        class="delete-btn">
-                                    Delete
-                                </button>
-                            </form>
+                                <form action="{{ url_for('downloader.delete_file', filename=file.name) }}" method="POST" style="display: inline;">
+                                    <button type="submit"
+                                            onclick="return confirm('Are you sure you want to permanently delete \'{{ file.name }}\'?')"
+                                            class="delete-btn" style="padding: 6px 12px;">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
         {% else %}
-            <p class="no-tasks" style="text-align: center; margin-top: 30px;">You have no downloaded files saved on the server.</p>
+            <div style="text-align: center; padding: 40px 20px; background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border-color); border-radius: 16px; margin: 24px 0;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📦</div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 6px; color: var(--text-color);">No Saved Files Yet</h3>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">You haven't stored any downloaded videos on this server.</p>
+                <a href="{{ url_for('downloader.download') }}" class="btn btn-primary">
+                    Start a Download Now &rarr;
+                </a>
+            </div>
         {% endif %}
 
         <p style="margin-top: 30px;">
-            <a href="{{ url_for('downloader.download') }}" class="btn btn-primary" style="width: auto;">&larr; Back to Downloader</a>
+            <a href="{{ url_for('downloader.download') }}" class="btn btn-secondary" style="width: auto;">&larr; Back to Downloader</a>
         </p>
     </section>
 {% endblock %}

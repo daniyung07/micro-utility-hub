@@ -146,7 +146,7 @@
     function updateToggleText() {
         if (!toggleColorButton) return;
         const modeText = isDarkMode ? 'Light Mode' : 'Dark Mode';
-        const label = 'Switch to ${modeText}';
+        const label = `Switch to ${modeText}`;
         toggleColorButton.setAttribute('aria-label', `Switch to ${modeText}`);
         toggleColorButton.setAttribute('title', label);
         toggleColorButton.querySelector('span').textContent = isDarkMode ? '🔦' : '☀️';

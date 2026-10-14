@@ -2,263 +2,285 @@
 
 {% extends "base.html" %}
 
-{% block title %}Downloader{% endblock %}
-
-{% block head_extra %}
-<style>
-    .progress-bar-container { width: 100%; background-color: #555; border-radius: 5px; margin-top: 10px; overflow: hidden; height: 25px; display: none; }
-    .progress-bar { width: 0%; height: 100%; background-color: var(--link-color); text-align: center; line-height: 25px; color: var(--night-sky-bg); font-weight: bold; transition: width 0.3s ease-in-out; }
-    body.light-mode .progress-bar { background-color: #007bff; color: white; }
-    body.light-mode .progress-bar-container { background-color: #e9ecef; }
-    .status-message { margin-top: 5px; font-size: 0.9em; min-height: 1.2em; }
-
-    /* Button styles */
-    .btn-success { background-color: var(--success-bg); color: white; border: none; text-decoration: none; border-radius: 8px; padding: 8px 12px; font-weight: 500; transition: background-color 0.2s ease; }
-    .btn-success:hover { background-color: #218838; color: white; text-decoration: none; }
-    body.light-mode .btn-success { background-color: var(--success-bg); color: white; }
-    body.light-mode .btn-success:hover { background-color: #218838; color: white; }
-
-    .control-button {
-         margin-left: 10px;
-         padding: 5px 10px;
-         font-size: 0.9em;
-         border: none;
-         border-radius: 5px;
-         cursor: pointer;
-    }
-    .cancel-button {
-         background-color: var(--error-bg);
-         color: white;
-    }
-    body.light-mode .cancel-button { background-color: #dc3545; color: white; }
-</style>
-{% endblock %}
-
+{% block title %}Universal Media Downloader{% endblock %}
 
 {% block content %}
     <section class="downloader-container">
-        <h1>Downloader</h1> <p>Enter the URL of the video you want to download (YouTube, X, TikTok, etc.).</p>
-        <p style="font-size: 0.8em; color: var(--error-bg);"><i>Note: Downloading copyrighted material may violate platform Terms of Service. Use responsibly.</i></p>
-        <hr>
-
-        <form method="POST" action="{{ url_for('downloader.download') }}">
-            {{ form.hidden_tag() }}
-            <div class="form-group">
-                {{ form.youtube_url.label(class="form-label", value="Video URL") }}
-                {{ form.youtube_url(class="form-input", placeholder="e.g., https://www.youtube.com/watch?v=...") }}
-                {% for error in form.youtube_url.errors %} <span class="error">[{{ error }}]</span> {% endfor %}
+        <!-- Hero Header -->
+        <div class="downloader-hero">
+            <div class="downloader-hero-badge">
+                <span>⚡</span> High-Speed Media Downloader
             </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary"> {{ form.submit.label.text }} </button>
+            <h1>Universal Downloader</h1>
+            <p>Download video and audio streams seamlessly from your favorite platforms.</p>
+            <div class="platform-badges">
+                <span class="platform-pill">🔴 YouTube</span>
+                <span class="platform-pill">🎵 SoundCloud</span>
+                <span class="platform-pill">📱 TikTok</span>
+                <span class="platform-pill">✖️ X / Twitter</span>
+                <span class="platform-pill">🎬 Vimeo</span>
+                <span class="platform-pill">📸 Instagram</span>
             </div>
-        </form>
+        </div>
 
-        {# --- REFACTORED DOWNLOAD OPTIONS --- #}
+        <!-- URL Input Card -->
+        <div class="downloader-input-card">
+            <form method="POST" action="{{ url_for('downloader.download') }}" id="downloader-fetch-form">
+                {{ form.hidden_tag() }}
+                <div class="form-group" style="margin-bottom: 18px;">
+                    {{ form.youtube_url.label(class="form-label", value="Media URL / Web Link") }}
+                    {{ form.youtube_url(class="form-input", placeholder="Paste video link here (e.g. https://www.youtube.com/watch?v=...)", id="media-url-input") }}
+                    {% for error in form.youtube_url.errors %}
+                        <span class="error">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary" id="fetch-options-btn">
+                        <span>🔍</span> {{ form.submit.label.text }}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Download Options Card -->
         {% if video_title and download_options %}
-            <div class="download-options" style="margin-top: 30px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
-                <h2>Download Options for: "{{ video_title }}"</h2>
+            <div class="downloader-options-card" id="options-card">
+                <div class="video-title-header">
+                    <span style="font-size: 1.6rem;">🎬</span>
+                    <h2>{{ video_title }}</h2>
+                </div>
 
                 <script id="stream-data" type="application/json">
                     {{ download_options | tojson | safe }}
                 </script>
 
-                <div class="download-ui-container" style="margin-top: 15px;">
-                    <div class="form-group" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <label for="quality-select" style="margin-right: 5px; font-size: 0.9em;">Choose Quality:</label>
+                <div class="quality-row">
+                    <label for="quality-select" style="font-weight: 600; font-size: 0.95rem; min-width: 120px;">
+                        Select Quality:
+                    </label>
 
-                        <select id="quality-select" class="form-input" style="flex-grow: 1; min-width: 200px;">
-                            {% for option in download_options %}
-                                <option value="{{ loop.index0 }}">
-                                    {{ option.resolution }} (~{{ option.size_mb }} MB)
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <select id="quality-select" class="form-input" style="flex-grow: 1; min-width: 240px; cursor: pointer;">
+                        {% for option in download_options %}
+                            <option value="{{ loop.index0 }}">
+                                {{ option.resolution }} {% if option.size_mb > 0 %}(~{{ option.size_mb }} MB){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
 
-                        <button type="button" class="btn btn-secondary" id="main-download-button" style="width: auto;">
-                            Download
+                    <button type="button" class="btn btn-primary" id="main-download-button">
+                        <span>📥</span> Start Download
+                    </button>
+                </div>
+
+                <!-- Live Progress Card -->
+                <div class="progress-card" id="progress-container-main" style="display: none;">
+                    <div class="progress-header">
+                        <span id="progress-status-text">Preparing stream...</span>
+                        <span id="progress-percent-badge" style="color: var(--link-color);">0%</span>
+                    </div>
+
+                    <div class="progress-track">
+                        <div class="progress-fill" id="progress-bar-main" style="width: 0%;"></div>
+                    </div>
+
+                    <div class="progress-meta">
+                        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+                            <span class="meta-item" id="progress-speed">
+                                <span>⚡</span> Speed: Initializing...
+                            </span>
+                            <span class="meta-item" id="progress-eta" style="display: none;">
+                                <span>⏱️</span> ETA: --
+                            </span>
+                        </div>
+                        <button type="button" class="btn btn-danger" id="cancel-main" style="padding: 6px 14px; font-size: 0.85rem;">
+                            ✕ Cancel
                         </button>
                     </div>
+                </div>
 
-                    <div class="progress-bar-container" id="progress-container-main" style="display: none;">
-                        <div class="progress-bar" id="progress-bar-main">0%</div>
-                    </div>
-                    <div class="status-message" id="status-main"></div>
-
-                    <div class="download-controls" id="controls-main" style="display: none; margin-top: 10px;">
-                        <button type="button" class="btn control-button cancel-button" id="cancel-main">Cancel</button>
-                    </div>
+                <!-- Ready & Complete Card -->
+                <div class="ready-card" id="ready-card-main" style="display: none;">
+                    <div style="font-size: 2.2rem; margin-bottom: 6px;">🎉</div>
+                    <h3>Your File is Ready!</h3>
+                    <p id="ready-filename-text">Click the button below to download the file directly to your device.</p>
+                    <a href="#" id="final-download-btn" class="btn btn-success" style="font-size: 1.05rem; padding: 12px 28px;">
+                        <span>💾</span> Save Video to Device
+                    </a>
                 </div>
             </div>
         {% elif video_title and not download_options %}
-             <p class="no-links" style="margin-top: 20px; color: var(--error-bg);">No downloadable streams found for this video.</p>
+            <div class="tip-banner" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); color: #fca5a5; margin-top: 20px;">
+                <strong>⚠️ No Downloadable Streams:</strong> Could not retrieve downloadable video streams for this link. If this platform is restricted or geo-blocked, try another link or download from SoundCloud, Vimeo, or direct streams.
+            </div>
         {% endif %}
-        {# --- END REFACTOR --- #}
 
+        <!-- Mobile & Network Access Tip -->
+        <div class="tip-banner">
+            <strong>💡 Pro-Tip for Phone Users:</strong>
+            You can access this hub from any phone on your local Wi-Fi or hotspot! Point your mobile browser to
+            <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #fff;">http://&lt;your-pc-ip&gt;:5000</code>
+            to enjoy unblocked, ultra-fast downloads directly to your phone.
+        </div>
     </section>
 {% endblock %}
 
 {% block scripts %}
     <script type="module" src="{{ url_for('static', filename='js/app.js') }}" defer></script>
     <script>
-        // --- REFACTORED SCRIPT FOR SINGLE DOWNLOAD UI ---
         document.addEventListener('DOMContentLoaded', () => {
             const mainDownloadButton = document.getElementById('main-download-button');
             const qualitySelect = document.getElementById('quality-select');
+            const streamDataElement = document.getElementById('stream-data');
 
-            // Check if the new download UI elements exist
-            if (mainDownloadButton && qualitySelect) {
-
-                // Parse the stream data from the JSON script tag
-                const streamDataElement = document.getElementById('stream-data');
+            if (mainDownloadButton && qualitySelect && streamDataElement) {
                 const allStreamOptions = JSON.parse(streamDataElement.textContent);
+                let statusInterval = null;
+                let currentTaskKey = null;
 
-                let statusIntervals = {};
-                let currentTaskKey = null; // Track the active task for cancellation
+                const progressContainer = document.getElementById('progress-container-main');
+                const progressBar = document.getElementById('progress-bar-main');
+                const progressStatusText = document.getElementById('progress-status-text');
+                const progressPercentBadge = document.getElementById('progress-percent-badge');
+                const progressSpeed = document.getElementById('progress-speed');
+                const progressEta = document.getElementById('progress-eta');
+                const cancelButton = document.getElementById('cancel-main');
+                const readyCard = document.getElementById('ready-card-main');
+                const readyFilename = document.getElementById('ready-filename-text');
+                const finalDownloadBtn = document.getElementById('final-download-btn');
 
-                // --- Main Download Button Click ---
-                mainDownloadButton.addEventListener('click', async (event) => {
-
-                    // 1. Get the selected option's index from the dropdown
+                mainDownloadButton.addEventListener('click', async () => {
                     const selectedIndex = qualitySelect.value;
-
-                    // 2. Get the full option data from our JSON array
                     const selectedOption = allStreamOptions[selectedIndex];
-
                     const taskKey = selectedOption.task_key;
-                    const initiateUrl = selectedOption.url; // The correct URL is in our JSON data
+                    const initiateUrl = selectedOption.url;
 
-                    currentTaskKey = taskKey; // Set this for the cancel button to use
+                    currentTaskKey = taskKey;
 
-                    // Get all the single UI elements
-                    const progressBarContainer = document.getElementById(`progress-container-main`);
-                    const progressBar = document.getElementById(`progress-bar-main`);
-                    const statusMessage = document.getElementById(`status-main`);
-                    const controlsContainer = document.getElementById(`controls-main`);
-                    const cancelButton = document.getElementById(`cancel-main`);
-
-                    // Reset UI
+                    // Reset & Show UI elements
                     mainDownloadButton.disabled = true;
-                    qualitySelect.disabled = true; // Disable select menu during download
-                    progressBarContainer.style.display = 'block';
+                    qualitySelect.disabled = true;
+                    readyCard.style.display = 'none';
+                    progressContainer.style.display = 'block';
                     progressBar.style.width = '0%';
-                    progressBar.textContent = '0%';
-                    statusMessage.textContent = 'Initiating download...';
-                    controlsContainer.style.display = 'block';
+                    progressPercentBadge.textContent = '0%';
+                    progressStatusText.textContent = 'Connecting & starting download...';
+                    progressSpeed.innerHTML = '<span>⚡</span> Speed: Connecting...';
+                    progressEta.style.display = 'none';
                     cancelButton.disabled = false;
 
-                    if (statusIntervals[taskKey]) clearInterval(statusIntervals[taskKey]);
+                    if (statusInterval) clearInterval(statusInterval);
 
                     try {
-                        // The initiateUrl from our JSON data already has all params
-                        const initiateResponse = await fetch(initiateUrl);
-                        const initiateData = await initiateResponse.json();
+                        const initiateRes = await fetch(initiateUrl);
+                        const initiateData = await initiateRes.json();
 
                         if (initiateData.status === 'started' || initiateData.status === 'already_running') {
-
-                            // Start polling for status
-                            statusIntervals[taskKey] = setInterval(async () => {
+                            // Poll status every 1.5 seconds
+                            statusInterval = setInterval(async () => {
                                 try {
-                                    const statusResponse = await fetch(`/downloader/status/${taskKey}`);
-                                    if (!statusResponse.ok) throw new Error(`Status check failed: ${statusResponse.status}`);
-                                    const statusData = await statusResponse.json();
+                                    const statusRes = await fetch(`/downloader/status/${taskKey}`);
+                                    if (!statusRes.ok) throw new Error(`Status check returned ${statusRes.status}`);
 
-                                    const realProgress = statusData.progress || 0;
-                                    progressBar.style.width = `${realProgress}%`;
-                                    progressBar.textContent = `${realProgress}%`;
+                                    const data = await statusRes.json();
+                                    const pct = Math.max(0, Math.min(100, data.progress || 0));
 
-                                    const speedStr = statusData.speed_str || '';
-                                    statusMessage.textContent = `Status: ${statusData.status}... (${speedStr})`;
+                                    progressBar.style.width = `${pct}%`;
+                                    progressPercentBadge.textContent = `${pct}%`;
 
-                                    // Handle completion or error
-                                    if (statusData.status === 'complete' || statusData.status === 'error' || statusData.status === 'cancelled' || statusData.status === 'not_found') {
-                                        clearInterval(statusIntervals[taskKey]);
-                                        delete statusIntervals[taskKey];
-                                        controlsContainer.style.display = 'none';
-                                        currentTaskKey = null;
-
-                                        if (statusData.status === 'complete') {
-                                            progressBar.style.width = `100%`;
-                                            progressBar.textContent = `100%`;
-                                            statusMessage.innerHTML = `Complete! <a href="${statusData.download_url}" class="btn-success" style="width: auto; margin-left: 10px;">Download File</a>`;
-                                        } else {
-                                            statusMessage.textContent = `Failed: ${statusData.message || statusData.status}`;
-                                            progressBarContainer.style.display = 'none';
+                                    if (data.status === 'downloading') {
+                                        progressStatusText.textContent = 'Downloading media stream...';
+                                        if (data.speed_str) {
+                                            progressSpeed.innerHTML = `<span>⚡</span> Speed: ${data.speed_str}`;
                                         }
+                                        if (data.eta_str) {
+                                            progressEta.style.display = 'inline-flex';
+                                            progressEta.innerHTML = `<span>⏱️</span> ETA: ${data.eta_str}`;
+                                        }
+                                    } else if (data.status === 'merging') {
+                                        progressStatusText.textContent = 'Multiplexing & finalizing MP4...';
+                                        progressSpeed.innerHTML = '<span>⚡</span> Merging audio & video tracks';
+                                        progressEta.style.display = 'none';
+                                    }
+
+                                    // Completion or error handling
+                                    if (data.status === 'complete') {
+                                        clearInterval(statusInterval);
+                                        statusInterval = null;
+                                        progressBar.style.width = '100%';
+                                        progressPercentBadge.textContent = '100%';
+                                        progressStatusText.textContent = 'Download Complete!';
+
+                                        // Reveal ready card
+                                        readyCard.style.display = 'block';
+                                        if (data.download_name) {
+                                            readyFilename.textContent = `"${data.download_name}" is ready to save.`;
+                                        }
+                                        finalDownloadBtn.href = data.download_url;
+
+                                        // Trigger auto-download prompt
+                                        window.location.href = data.download_url;
+
                                         mainDownloadButton.disabled = false;
                                         qualitySelect.disabled = false;
+                                        currentTaskKey = null;
+
+                                    } else if (data.status === 'error' || data.status === 'cancelled') {
+                                        clearInterval(statusInterval);
+                                        statusInterval = null;
+                                        progressContainer.style.display = 'none';
+
+                                        alert(data.status === 'cancelled'
+                                            ? 'Download cancelled.'
+                                            : `Download Notice: ${data.message || 'An error occurred during download.'}`);
+
+                                        mainDownloadButton.disabled = false;
+                                        qualitySelect.disabled = false;
+                                        currentTaskKey = null;
                                     }
-                                } catch (pollError) {
-                                     clearInterval(statusIntervals[taskKey]);
-                                     delete statusIntervals[taskKey];
-                                     statusMessage.textContent = 'Error checking status.';
-                                     progressBarContainer.style.display = 'none';
-                                     controlsContainer.style.display = 'none';
-                                     mainDownloadButton.disabled = false;
-                                     qualitySelect.disabled = false;
-                                     currentTaskKey = null;
-                                     console.error("Polling error:", pollError);
+
+                                } catch (pollErr) {
+                                    console.error('Polling error:', pollErr);
                                 }
-                            }, 2000); // Poll every 2 seconds
+                            }, 1500);
 
                         } else {
-                            throw new Error(initiateData.message || 'Failed to start download.');
+                            throw new Error(initiateData.message || 'Failed to initialize download task.');
                         }
 
-                    } catch (error) {
-                        statusMessage.textContent = `Error: ${error.message}`;
-                        progressBarContainer.style.display = 'none';
-                        controlsContainer.style.display = 'none';
+                    } catch (err) {
+                        alert(`Download error: ${err.message}`);
+                        progressContainer.style.display = 'none';
                         mainDownloadButton.disabled = false;
                         qualitySelect.disabled = false;
                         currentTaskKey = null;
-                        console.error("Initiation error:", error);
                     }
                 });
 
-                // --- Event Listener for the single Cancel Button ---
-                document.getElementById('cancel-main')?.addEventListener('click', async (event) => {
-                    if (!currentTaskKey) return; // No active task
-
-                    const button = event.target;
-                    const statusMessage = document.getElementById('status-main');
-
-                    const url = `/downloader/cancel/${currentTaskKey}`;
-                    const action = 'Cancelling...';
-
-                    button.disabled = true;
-                    statusMessage.textContent = action;
+                // Cancel Button handler
+                cancelButton.addEventListener('click', async () => {
+                    if (!currentTaskKey) return;
+                    cancelButton.disabled = true;
+                    progressStatusText.textContent = 'Cancelling download...';
 
                     try {
-                        const response = await fetch(url, { method: 'POST' });
-                        const data = await response.json();
+                        const cancelRes = await fetch(`/downloader/cancel/${currentTaskKey}`, { method: 'POST' });
+                        const cancelData = await cancelRes.json();
 
-                        if (data.status === 'cancel_requested' || data.status === 'cancelled') {
-                            statusMessage.textContent = 'Status: cancelling...';
-                            if (statusIntervals[currentTaskKey]) {
-                                 clearInterval(statusIntervals[currentTaskKey]);
-                                 delete statusIntervals[currentTaskKey];
-                            }
-
-                            // Manually trigger final cleanup
-                            document.getElementById(`controls-main`).style.display = 'none';
-                            document.getElementById(`progress-container-main`).style.display = 'none';
-                            statusMessage.textContent = 'Download Cancelled.';
-                            mainDownloadButton.disabled = false;
-                            qualitySelect.disabled = false;
-                            currentTaskKey = null;
-
-                        } else {
-                             button.disabled = false; // Re-enable if action failed
+                        if (statusInterval) {
+                            clearInterval(statusInterval);
+                            statusInterval = null;
                         }
 
-                    } catch (error) {
-                        statusMessage.textContent = 'Error sending command.';
-                        console.error("Control error:", error);
-                        button.disabled = false; // Re-enable on error
+                        progressContainer.style.display = 'none';
+                        mainDownloadButton.disabled = false;
+                        qualitySelect.disabled = false;
+                        currentTaskKey = null;
+                    } catch (cancelErr) {
+                        console.error('Cancel error:', cancelErr);
+                        cancelButton.disabled = false;
                     }
                 });
-
-            } // End of if(mainDownloadButton)
+            }
         });
     </script>
 {% endblock %}
