@@ -104,7 +104,8 @@ def get_base_ydl_opts():
         'http_chunk_size': 10485760,  # 10MB discrete chunking avoids socket read timeouts on large streams
         'extractor_args': {
             'youtube': {
-                'player_client': ['android_creator', 'android', 'web']
+                'player_client': ['android_sdkless', 'android_vr', 'android'],
+                'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
             }
         }
     }
@@ -132,9 +133,16 @@ def download_process_thread(app, url, format_id, task_key, filepath):
     with app.app_context():
         ffmpeg_dir = get_ffmpeg_dir()
 
-        # Format selector: if ffmpeg is available, combine video+audio.
-        # Otherwise fallback to best pre-merged stream so it never crashes.
-        if ffmpeg_dir:
+        is_youtube = 'youtube.com' in url.lower() or 'youtu.be' in url.lower()
+
+        # Format selector: for YouTube, prioritize unthrottled progressive MP4 streams
+        # that do not require GVS PO Tokens (preventing HTTP 403 Forbidden).
+        if is_youtube:
+            if format_id == 'best':
+                format_selector = 'best[ext=mp4]/18/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best'
+            else:
+                format_selector = f"{format_id}/best[ext=mp4]/best"
+        elif ffmpeg_dir:
             if format_id == 'best':
                 format_selector = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best'
             else:
@@ -255,8 +263,42 @@ def download():
             ydl_opts['skip_download'] = True
             ydl_opts['noplaylist'] = True
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                data = ydl.extract_info(url, download=False)
+            data = None
+            is_youtube = 'youtube.com' in url.lower() or 'youtu.be' in url.lower()
+
+            if is_youtube:
+                # Multi-tier client strategy: Android SDKless/VR -> pure Android -> pure VR
+                client_tiers = [
+                    {
+                        'player_client': ['android_sdkless', 'android_vr', 'android'],
+                        'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
+                    },
+                    {
+                        'player_client': ['android'],
+                        'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
+                    },
+                    {
+                        'player_client': ['android_vr'],
+                        'player_skip': ['web', 'web_creator', 'mweb', 'tv', 'web_safari']
+                    }
+                ]
+                last_extract_err = None
+                for tier in client_tiers:
+                    try:
+                        ydl_opts['extractor_args'] = {'youtube': tier}
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            data = ydl.extract_info(url, download=False)
+                        if data and (data.get('formats') or data.get('url')):
+                            break
+                    except Exception as tier_err:
+                        last_extract_err = tier_err
+                        current_app.logger.warning(f"YouTube strategy failed ({tier}): {tier_err}")
+
+                if not data and last_extract_err:
+                    raise last_extract_err
+            else:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    data = ydl.extract_info(url, download=False)
 
             if not data:
                 raise Exception("Could not retrieve video information.")
