@@ -4,6 +4,10 @@ import os
 import re
 import shutil
 import threading
+import json
+import time
+import subprocess
+import requests
 import yt_dlp
 
 from flask import (
@@ -17,8 +21,9 @@ from app.forms import YouTubeDownloaderForm
 
 downloader = Blueprint('downloader', __name__, template_folder='templates')
 
-# In-memory storage for download progress
+# In-memory storage for download progress and unblocked stream metadata
 download_tasks = {}
+stream_cache = {}
 
 
 def get_ffmpeg_dir():
@@ -86,6 +91,188 @@ def get_cookie_file():
         if os.path.exists(p) and os.path.getsize(p) > 20:
             return os.path.abspath(p)
     return None
+
+
+INVIDIOUS_INSTANCES = [
+    'https://invidious.f5.si',
+    'https://inv.vern.cc',
+    'https://invidious.protokolla.fi',
+    'https://yewtu.be',
+    'https://invidious.privacydev.net'
+]
+
+
+def extract_youtube_fallback(url):
+    """Resilient fallback extractor for YouTube using unblocked Invidious mirrors."""
+    match = re.search(r'(?:v=|\/|embed\/|shorts\/)([0-9A-Za-z_-]{11})', url)
+    if not match:
+        return None
+    video_id = match.group(1)
+
+    for inst in INVIDIOUS_INSTANCES:
+        try:
+            api_url = f"{inst}/api/v1/videos/{video_id}"
+            resp = requests.get(api_url, timeout=6)
+            if resp.status_code == 200:
+                data = resp.json()
+                title = data.get('title', f"YouTube_{video_id}")
+
+                # Detect highest quality audio stream for separate adaptive streams
+                best_audio_url = None
+                for s in data.get('adaptiveFormats', []):
+                    if 'audio' in s.get('type', '') and 'mp4' in s.get('type', ''):
+                        best_audio_url = s.get('url')
+                        break
+                if not best_audio_url:
+                    for s in data.get('adaptiveFormats', []):
+                        if 'audio' in s.get('type', ''):
+                            best_audio_url = s.get('url')
+                            break
+
+                formats = []
+                # 1. Progressive video+audio combined streams
+                for s in data.get('formatStreams', []):
+                    res = s.get('resolution', '360p')
+                    ext = s.get('container', 'mp4')
+                    formats.append({
+                        'format_id': f"inv_prog_{res}",
+                        'resolution': f"{res} (Progressive MP4)",
+                        'height': int(re.sub(r'\D', '', res)) if re.sub(r'\D', '', res) else 360,
+                        'ext': ext,
+                        'url': s.get('url'),
+                        'audio_url': None,
+                        'filesize': 0
+                    })
+
+                # 2. Adaptive high-definition streams
+                for s in data.get('adaptiveFormats', []):
+                    if 'video' in s.get('type', '') and 'mp4' in s.get('type', ''):
+                        q = s.get('qualityLabel', '')
+                        ext = s.get('container', 'mp4')
+                        clen = s.get('clen')
+                        formats.append({
+                            'format_id': f"inv_adapt_{q}",
+                            'resolution': f"{q} (HD MP4)",
+                            'height': int(re.sub(r'\D', '', q)) if re.sub(r'\D', '', q) else 720,
+                            'ext': ext,
+                            'url': s.get('url'),
+                            'audio_url': best_audio_url,
+                            'filesize': int(clen) if clen else 0
+                        })
+
+                if formats:
+                    return {
+                        'id': video_id,
+                        'title': title,
+                        'formats': formats
+                    }
+        except Exception:
+            continue
+    return None
+
+
+def download_direct_stream(video_url, audio_url, filepath, task_info):
+    """Downloads an unblocked direct stream with live byte progress and ffmpeg merging."""
+    task_info['status'] = 'downloading'
+    task_info['speed_str'] = 'Connecting...'
+    task_info['progress'] = 1
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+
+    # Case 1: Progressive stream (video and audio already combined)
+    if not audio_url:
+        t0 = time.time()
+        with requests.get(video_url, headers=headers, stream=True, timeout=35) as r:
+            r.raise_for_status()
+            total = int(r.headers.get('content-length', 0))
+            downloaded = 0
+            with open(filepath, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=256 * 1024):
+                    if task_info.get('cancel_requested'):
+                        raise Exception("Download cancelled by user.")
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total > 0:
+                            percent = int((downloaded / total) * 100)
+                            task_info['progress'] = min(max(percent, 1), 99)
+                        dt = max(time.time() - t0, 0.1)
+                        speed_mb = (downloaded / (1024 * 1024)) / dt
+                        task_info['speed_str'] = f"{speed_mb:.1f} MB/s"
+        return filepath
+
+    # Case 2: Adaptive stream (separate video and audio streams)
+    temp_v = filepath + '.v.temp'
+    temp_a = filepath + '.a.temp'
+    try:
+        # Download video stream (0% -> 70%)
+        t0 = time.time()
+        with requests.get(video_url, headers=headers, stream=True, timeout=35) as r:
+            r.raise_for_status()
+            total_v = int(r.headers.get('content-length', 0))
+            downloaded_v = 0
+            with open(temp_v, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=256 * 1024):
+                    if task_info.get('cancel_requested'):
+                        raise Exception("Download cancelled by user.")
+                    if chunk:
+                        f.write(chunk)
+                        downloaded_v += len(chunk)
+                        if total_v > 0:
+                            percent = int((downloaded_v / total_v) * 70)
+                            task_info['progress'] = min(max(percent, 1), 70)
+                        dt = max(time.time() - t0, 0.1)
+                        speed_mb = (downloaded_v / (1024 * 1024)) / dt
+                        task_info['speed_str'] = f"{speed_mb:.1f} MB/s (Video)"
+
+        # Download audio stream (70% -> 95%)
+        t0 = time.time()
+        with requests.get(audio_url, headers=headers, stream=True, timeout=35) as r:
+            r.raise_for_status()
+            total_a = int(r.headers.get('content-length', 0))
+            downloaded_a = 0
+            with open(temp_a, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=256 * 1024):
+                    if task_info.get('cancel_requested'):
+                        raise Exception("Download cancelled by user.")
+                    if chunk:
+                        f.write(chunk)
+                        downloaded_a += len(chunk)
+                        if total_a > 0:
+                            percent = 70 + int((downloaded_a / total_a) * 25)
+                            task_info['progress'] = min(max(percent, 70), 95)
+                        dt = max(time.time() - t0, 0.1)
+                        speed_mb = (downloaded_a / (1024 * 1024)) / dt
+                        task_info['speed_str'] = f"{speed_mb:.1f} MB/s (Audio)"
+
+        # Merge video and audio with FFmpeg
+        task_info['status'] = 'merging'
+        task_info['speed_str'] = 'Merging video and audio...'
+        task_info['progress'] = 98
+
+        ffmpeg_cmd = shutil.which('ffmpeg') or 'ffmpeg'
+        cmd = [
+            ffmpeg_cmd, '-y',
+            '-i', temp_v,
+            '-i', temp_a,
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            filepath
+        ]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if res.returncode != 0:
+            shutil.copyfile(temp_v, filepath)
+
+        return filepath
+    finally:
+        for temp_f in (temp_v, temp_a):
+            if os.path.exists(temp_f):
+                try:
+                    os.remove(temp_f)
+                except OSError:
+                    pass
 
 
 def get_base_ydl_opts():
@@ -198,6 +385,41 @@ def download_process_thread(app, url, format_id, task_key, filepath):
             'http_chunk_size': 10485760,
         })
 
+        # Check if direct unblocked stream is available in stream_cache
+        stream_info = stream_cache.get(task_key)
+        if stream_info and stream_info.get('video_url'):
+            try:
+                current_app.logger.info(f"Starting direct stream download for {task_key}")
+                download_direct_stream(
+                    video_url=stream_info['video_url'],
+                    audio_url=stream_info.get('audio_url'),
+                    filepath=filepath,
+                    task_info=download_tasks[task_key]
+                )
+                task_info = download_tasks.get(task_key, {})
+                task_info['filepath'] = filepath
+                task_info['download_name'] = os.path.basename(filepath)
+                task_info['status'] = 'complete'
+                task_info['progress'] = 100
+                task_info['speed_str'] = "Complete"
+                task_info['eta_str'] = "Done"
+                return
+            except Exception as direct_err:
+                current_app.logger.error(f"Direct stream download failed for {task_key}: {direct_err}")
+                cleanup_partial_files(filepath)
+                if task_key in download_tasks:
+                    task_info = download_tasks[task_key]
+                    if "cancelled by user" in str(direct_err).lower():
+                        task_info['status'] = 'cancelled'
+                        task_info['speed_str'] = 'Cancelled'
+                        task_info['eta_str'] = ''
+                    else:
+                        task_info['status'] = 'error'
+                        task_info['error_message'] = str(direct_err).split(';')[0]
+                        task_info['speed_str'] = 'Error'
+                        task_info['eta_str'] = ''
+                return
+
         try:
             current_app.logger.info(f"Starting download for {task_key} with format {format_selector}")
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -296,6 +518,14 @@ def download():
                         last_extract_err = tier_err
                         current_app.logger.warning(f"YouTube strategy failed ({tier}): {tier_err}")
 
+                # If yt-dlp was blocked by cloud datacenter IP anti-bot, seamlessly fall back
+                if not data:
+                    try:
+                        current_app.logger.info("yt-dlp blocked on datacenter IP. Invoking Invidious fallback...")
+                        data = extract_youtube_fallback(url)
+                    except Exception as fb_err:
+                        current_app.logger.error(f"Fallback extraction error: {fb_err}")
+
                 if not data and last_extract_err:
                     raise last_extract_err
             else:
@@ -340,6 +570,13 @@ def download():
                 'task_key': task_key_best,
                 'size_mb': 0
             })
+            if candidates and candidates[0].get('url'):
+                stream_cache[task_key_best] = {
+                    'video_url': candidates[0].get('url'),
+                    'audio_url': candidates[0].get('audio_url'),
+                    'ext': candidates[0].get('ext', 'mp4'),
+                    'title': video_title
+                }
 
             # 2. Add individual resolution options (deduplicated)
             seen_resolutions = set()
@@ -359,6 +596,14 @@ def download():
 
                 raw_key = f"{video_id}_{format_id}_{current_user.id}"
                 task_key = "".join(c for c in raw_key if c.isalnum() or c in ('_', '-'))
+
+                if stream.get('url'):
+                    stream_cache[task_key] = {
+                        'video_url': stream.get('url'),
+                        'audio_url': stream.get('audio_url'),
+                        'ext': ext,
+                        'title': video_title
+                    }
 
                 initiate_url = url_for(
                     'downloader.initiate_download',
@@ -384,9 +629,9 @@ def download():
             err_raw = str(e)
             if "not a bot" in err_raw.lower() or "bot" in err_raw.lower():
                 err_msg = (
-                    "YouTube anti-bot challenge: YouTube actively restricts cloud datacenter IPs (like Render/AWS). "
-                    "You can download media from SoundCloud or Vimeo directly on this server, "
-                    "or run the hub locally on your home network where YouTube downloads work smoothly without IP blocks."
+                    "YouTube anti-bot restriction: YouTube actively restricts cloud datacenter IPs (like AWS/Render). "
+                    "To enable 24/7 cloud YouTube downloads, add a free rotating proxy URL to Render's environment variables as PROXY_URL (e.g. from Webshare.io). "
+                    "You can also download media from SoundCloud, Vimeo, and TikTok without any IP restrictions."
                 )
             else:
                 err_msg = err_raw.split(';')[0].replace('ERROR:', '').strip()
