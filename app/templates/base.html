@@ -49,8 +49,6 @@
                     <li><a href="{{ url_for('blog.blog_index') }}" class="{{ 'active' if active_page == 'blog' else '' }}">Blog</a></li>
                     <li><a href="{{ url_for('tasks.index') }}" class="{{ 'active' if active_page == 'tasks' else '' }}">Tasks</a></li>
                     <li><a href="{{ url_for('shortener.create') }}" class="{{ 'active' if active_page == 'shortener' else '' }}">Shortener</a></li>
-                    <li><a href="{{ url_for('downloader.download') }}" class="{{ 'active' if active_page == 'downloader' else '' }}">Downloader</a></li>
-                    <li><a href="{{ url_for('downloader.my_files') }}" class="{{ 'active' if active_page == 'my_files' else '' }}">My Downloads</a></li>
                     {# Deleted Chatbot Desktop Nav Link #}
                     <li class="nav-divider" aria-hidden="true">|</li>
                     <li><a href="{{ url_for('auth.user_profile', username=current_user.username) }}" class="{{ 'active' if active_page == 'profile' else '' }}">Profile</a></li>
@@ -75,8 +73,6 @@
                     <li><a href="{{ url_for('blog.blog_index') }}" class="{{ 'active' if active_page == 'blog' else '' }}">Blog</a></li>
                     <li><a href="{{ url_for('tasks.index') }}" class="{{ 'active' if active_page == 'tasks' else '' }}">Tasks</a></li>
                     <li><a href="{{ url_for('shortener.create') }}" class="{{ 'active' if active_page == 'shortener' else '' }}">Shortener</a></li>
-                    <li><a href="{{ url_for('downloader.download') }}" class="{{ 'active' if active_page == 'downloader' else '' }}">Downloader</a></li>
-                    <li><a href="{{ url_for('downloader.my_files') }}" class="{{ 'active' if active_page == 'my_files' else '' }}">My Downloads</a></li>
                     {# Deleted Chatbot Mobile Nav Link #}
                     <li><a href="{{ url_for('auth.user_profile', username=current_user.username) }}" class="{{ 'active' if active_page == 'profile' else '' }}">Profile</a></li>
                     <li class="user-info" aria-live="polite">

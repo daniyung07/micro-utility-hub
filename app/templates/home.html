@@ -8,7 +8,7 @@
     <section class="dashboard-content">
         <div style="margin-bottom: 24px;">
             <h1>Welcome to Your Micro-Utility Hub</h1>
-            <p>Your unified productivity suite is ready. Manage your notes, tasks, short links, and media downloads from one secure place.</p>
+            <p>Your unified productivity suite is ready. Manage your notes, tasks, and short links from one secure place.</p>
         </div>
 
         <section>
@@ -16,14 +16,6 @@
             <p>Each module is protected, high-performance, and tied securely to your account:</p>
 
             <ul class="module-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 16px;">
-                <li style="margin-bottom: 0;">
-                    <a href="{{ url_for('downloader.download') }}" style="display: flex; align-items: center; gap: 8px; font-size: 1.1rem; margin-bottom: 6px;">
-                        <span>⚡</span> <strong>Universal Downloader</strong>
-                    </a>
-                    <p style="font-size: 0.92rem; margin-bottom: 0; color: var(--text-muted);">
-                        Fetch and download high-quality videos & audio from YouTube, SoundCloud, TikTok, and more.
-                    </p>
-                </li>
                 <li style="margin-bottom: 0;">
                     <a href="{{ url_for('blog.blog_index') }}" style="display: flex; align-items: center; gap: 8px; font-size: 1.1rem; margin-bottom: 6px;">
                         <span>📝</span> <strong>Blog & Notes</strong>

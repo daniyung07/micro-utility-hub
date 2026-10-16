@@ -28,5 +28,3 @@ typing_extensions==4.15.0
 urllib3==2.5.0
 Werkzeug==3.1.4
 wtforms==3.2.1
-yt-dlp>=2025.10.0
-static-ffmpeg>=2.5

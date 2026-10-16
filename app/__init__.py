@@ -20,12 +20,6 @@ load_dotenv(os.path.join(basedir, '..', '.env'))
 def create_app():
     app = Flask(__name__)
 
-    # Ensure ffmpeg binaries are in PATH if static-ffmpeg is available
-    try:
-        import static_ffmpeg
-        static_ffmpeg.add_paths()
-    except Exception:
-        pass
 
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
@@ -73,7 +67,6 @@ def create_app():
     from .blueprints.blog.routes import blog as blog_bp
     from .blueprints.tasks.routes import tasks as tasks_bp
     from .blueprints.shortener.routes import short as shortener_bp
-    from .blueprints.downloader.routes import downloader as downloader_bp
 
     # 2. Register all blueprints (Only once for each)
     app.register_blueprint(main_bp)
@@ -81,7 +74,6 @@ def create_app():
     app.register_blueprint(blog_bp, url_prefix='/blog')
     app.register_blueprint(tasks_bp, url_prefix='/tasks')
     app.register_blueprint(shortener_bp, url_prefix='/links')
-    app.register_blueprint(downloader_bp, url_prefix='/downloader')
 
     return app
 
