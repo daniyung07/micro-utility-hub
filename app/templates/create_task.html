@@ -28,10 +28,11 @@
                 {% endfor %}
             </div>
 
-            <div class="form-actions">
+            <div class="form-actions" style="display: flex; gap: 12px; align-items: center;">
                 <button type="submit" class="btn btn-primary">
                     Add Task
                 </button>
+                <a href="{{ url_for('tasks.index') }}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </section>

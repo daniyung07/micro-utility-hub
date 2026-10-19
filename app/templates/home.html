@@ -6,63 +6,73 @@
 
 {% block content %}
     <section class="dashboard-content">
-        <div style="margin-bottom: 24px;">
-            <h1>Welcome to Your Micro-Utility Hub</h1>
-            <p>Your unified productivity suite is ready. Manage your notes, tasks, and short links from one secure place.</p>
+        <div class="dashboard-hero">
+            <span class="hero-badge">⚡ Unified Productivity Hub</span>
+            <h1>Welcome to Your Workspace</h1>
+            <p>Your secure cloud suite is ready. Organize your tasks, draft notes, and shorten trackable links with ease.</p>
         </div>
 
-        <section>
-            <h2>Available Modules</h2>
-            <p>Each module is protected, high-performance, and tied securely to your account:</p>
+        <section class="dashboard-modules-section">
+            <div class="section-header">
+                <h2>Productivity Modules</h2>
+                <span class="section-tag">Fast & Secure</span>
+            </div>
 
-            <ul class="module-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 16px;">
-                <li style="margin-bottom: 0;">
-                    <a href="{{ url_for('blog.blog_index') }}" style="display: flex; align-items: center; gap: 8px; font-size: 1.1rem; margin-bottom: 6px;">
-                        <span>📝</span> <strong>Blog & Notes</strong>
-                    </a>
-                    <p style="font-size: 0.92rem; margin-bottom: 0; color: var(--text-muted);">
-                        Write, format, publish, and search your personal posts and documentation.
-                    </p>
-                </li>
-                <li style="margin-bottom: 0;">
-                    <a href="{{ url_for('tasks.index') }}" style="display: flex; align-items: center; gap: 8px; font-size: 1.1rem; margin-bottom: 6px;">
-                        <span>✔️</span> <strong>Task Manager</strong>
-                    </a>
-                    <p style="font-size: 0.92rem; margin-bottom: 0; color: var(--text-muted);">
-                        Organize and track your private to-do list with interactive completion checkboxes.
-                    </p>
-                </li>
-                <li style="margin-bottom: 0;">
-                    <a href="{{ url_for('shortener.create') }}" style="display: flex; align-items: center; gap: 8px; font-size: 1.1rem; margin-bottom: 6px;">
-                        <span>🔗</span> <strong>URL Shortener</strong>
-                    </a>
-                    <p style="font-size: 0.92rem; margin-bottom: 0; color: var(--text-muted);">
-                        Generate fast, trackable short URLs with real-time click analytics.
-                    </p>
-                </li>
-            </ul>
+            <div class="modules-grid">
+                <a href="{{ url_for('blog.blog_index') }}" class="module-card">
+                    <div class="module-card-icon" style="background: rgba(37, 99, 235, 0.12); color: #3b82f6;">
+                        <span>📝</span>
+                    </div>
+                    <h3>Blog & Notes</h3>
+                    <p>Draft, format, and search your personal posts, guides, and project documentation.</p>
+                    <span class="module-card-link">Open Notes &rarr;</span>
+                </a>
+
+                <a href="{{ url_for('tasks.index') }}" class="module-card">
+                    <div class="module-card-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                        <span>✔️</span>
+                    </div>
+                    <h3>Task Manager</h3>
+                    <p>Organize and track your private to-do list with real-time interactive checkboxes.</p>
+                    <span class="module-card-link">Manage Tasks &rarr;</span>
+                </a>
+
+                <a href="{{ url_for('shortener.create') }}" class="module-card">
+                    <div class="module-card-icon" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8;">
+                        <span>🔗</span>
+                    </div>
+                    <h3>URL Shortener</h3>
+                    <p>Create compact, shareable URLs and monitor real-time click engagement analytics.</p>
+                    <span class="module-card-link">Shorten Link &rarr;</span>
+                </a>
+            </div>
         </section>
 
         <hr>
 
-        <section>
-            <h2>Recent Blog Posts</h2>
-            <div class="module-list">
+        <section class="dashboard-recent-section">
+            <div class="section-header">
+                <h2>Recent Notes & Posts</h2>
+                <a href="{{ url_for('blog.new_post') }}" class="btn-small" style="text-decoration: none;">+ Write New</a>
+            </div>
+
+            <div class="recent-posts-list">
                 {% for post in posts %}
-                <article>
-                    <ul style="list-style: none; padding-left: 0;">
-                        <li class="post-data" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <a href="{{ url_for('blog.view_post', post_id=post.id) }}" style="font-size: 1.05rem;">
-                                {{ post.title }}
-                            </a>
-                            <span style="font-size: 0.85em; color: var(--text-muted);">
-                                By <strong>{{ post.post_author.username }}</strong> on <time datetime="{{ post.date_posted.isoformat() }}">{{ post.date_posted.strftime('%B %d, %Y') }}</time>
-                            </span>
-                        </li>
-                    </ul>
+                <article class="recent-post-card">
+                    <div class="recent-post-info">
+                        <a href="{{ url_for('blog.view_post', post_id=post.id) }}" class="recent-post-title">
+                            {{ post.title }}
+                        </a>
+                        <span class="recent-post-meta">
+                            By <strong>{{ post.post_author.username }}</strong> &bull; <time datetime="{{ post.date_posted.isoformat() }}">{{ post.date_posted.strftime('%B %d, %Y') }}</time>
+                        </span>
+                    </div>
+                    <a href="{{ url_for('blog.view_post', post_id=post.id) }}" class="recent-post-arrow" aria-label="Read post">&rarr;</a>
                 </article>
                 {% else %}
-                <p style="color: var(--text-muted); margin-top: 10px;">No recent posts yet. <a href="{{ url_for('blog.new_post') }}" style="color: var(--link-color);">Create your first post</a>!</p>
+                <div class="empty-state-card">
+                    <p>No recent notes yet. <a href="{{ url_for('blog.new_post') }}">Create your first note</a>!</p>
+                </div>
                 {% endfor %}
             </div>
         </section>

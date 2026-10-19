@@ -166,8 +166,6 @@
         // Smooth hue transition logic
         currentBgHue += (diff > 180 ? (diff - 360) : diff < -180 ? (diff + 360) : diff) * HUE_TRANSITION_RATE;
         currentBgHue = (currentBgHue % 360 + 360) % 360; // Normalize hue
-
-        body.style.backgroundColor = `hsl(${currentBgHue}, ${isDarkMode ? 70 : 40}%, ${isDarkMode ? 8 : 85}%)`;
     }
 
     // -------------------------------------------------------------------
@@ -591,24 +589,18 @@
         celestialPosition = (celestialPosition + CELESTIAL_SPEED) % 1;
         updateBackgroundColor();
 
-        // H1 shadow effect
-        const pageH1 = document.querySelector('.content h1');
-        if (pageH1) {
-            const shadowColor = isDarkMode ? `hsl(${currentBgHue}, 100%, 85%)` : `transparent`;
-            pageH1.style.textShadow = `0 0 5px ${shadowColor}, 0 0 10px ${shadowColor}`;
+        // Clear canvas
+        if (!isAnimating) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = isDarkMode ? 'rgba(9, 13, 22, 0.22)' : 'rgba(248, 250, 252, 0.22)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Clear canvas
-        const clearAlpha = isDarkMode ? 0.1 : 0.05;
-        // Use full opacity clear when animation is off to ensure a clean, static background
-        ctx.fillStyle = `hsla(${currentBgHue}, ${isDarkMode ? 70 : 40}%, ${isDarkMode ? 8 : 85}%, ${isAnimating ? clearAlpha : 1})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw static elements
-        drawStars();
-        drawSun();
-        drawMoon();
-        drawGround();
+        // Draw ambient subtle stars in dark mode
+        if (isDarkMode) {
+            drawStars();
+        }
 
         // Draw dynamic elements (only if animating)
         if (isAnimating) {

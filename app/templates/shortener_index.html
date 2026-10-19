@@ -6,22 +6,24 @@
 
 {% block content %}
     <section class="shortener-index-container">
-        <h1>Your Short Links</h1>
+        <div class="index-header-bar">
+            <h1>Your Short Links</h1>
+            <a class="form-create" href="{{ url_for('shortener.create') }}">+ New Short Link</a>
+        </div>
         <hr>
 
-        <p><a class="form-create" href="{{ url_for('shortener.create') }}">Create a New Short Link</a></p>
-
         {% if links %}
-            <table class="links-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                <caption>List of shortened URLs</caption>
-                <thead>
-                    <tr>
-                        <th class="short-code-col" style="padding: 10px; width: 20%; text-align: left;">Short Code</th>
-                        <th class="original-url-col" style="padding: 10px; width: 50%; text-align: left;">Original URL</th>
-                        <th class="clicks-col" style="padding: 10px; width: 15%; text-align: center;">Clicks</th>
-                        <th class="actions-col" style="padding: 10px; width: 15%; text-align: center;">Actions</th>
-                    </tr>
-                </thead>
+            <div class="table-responsive">
+                <table class="links-table">
+                    <caption>List of shortened URLs</caption>
+                    <thead>
+                        <tr>
+                            <th class="short-code-col">Short Code</th>
+                            <th class="original-url-col">Original URL</th>
+                            <th class="clicks-col">Clicks</th>
+                            <th class="actions-col">Actions</th>
+                        </tr>
+                    </thead>
                 <tbody>
                 {% for link in links %}
                     <tr>
@@ -52,8 +54,11 @@
                 {% endfor %}
                 </tbody>
             </table>
+        </div>
         {% else %}
-            <p>You haven't shortened any links yet. Start by creating one above!</p>
+            <div class="empty-state-card">
+                <p>You haven't shortened any links yet. Start by creating one above!</p>
+            </div>
         {% endif %}
     </section>
 {% endblock %}

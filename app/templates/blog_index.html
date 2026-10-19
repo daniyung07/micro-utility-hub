@@ -5,20 +5,24 @@
 {% block title %}Blog Index{% endblock %}
 
 {% block content %}
-    <h1>Blog Posts</h1>
+    <h1>Blog & Notes</h1>
 
-    <form action="{{ url_for('blog.blog_index') }}" method="GET" class="search-form-container" style="margin-bottom: 20px;">
-        <input type="search"
-               id="blog-search-input"
-               name="search"
-               placeholder="Search post titles or content..."
-               value="{{ request.args.get('search', '') }}"
-               class="form-input" style="width: 70%; display: inline-block;">
+    <div class="blog-header-bar">
+        <form action="{{ url_for('blog.blog_index') }}" method="GET" class="search-form-container">
+            <input type="search"
+                   id="blog-search-input"
+                   name="search"
+                   placeholder="Search post titles or content..."
+                   value="{{ request.args.get('search', '') }}"
+                   class="form-input">
+            <button type="submit" class="btn btn-primary">Search</button>
+            {% if request.args.get('search') %}
+                <a href="{{ url_for('blog.blog_index') }}" class="btn btn-secondary">Clear</a>
+            {% endif %}
+        </form>
 
-        <button type="submit" class="btn btn-primary" style="width: 25%; display: inline-block;">Search</button>
-    </form>
-
-    <p><a class="form-create" href="{{ url_for('blog.new_post') }}">Create a New Post</a></p>
+        <a class="form-create" href="{{ url_for('blog.new_post') }}">+ New Post</a>
+    </div>
     <hr>
 
     <section class="posts-list-section">
@@ -29,7 +33,7 @@
                         <a href="{{ url_for('blog.view_post', post_id=post.id) }}">{{ post.title }}</a>
                     </h2>
                     <p class="post-meta">
-                        Posted by **{{ post.post_author.username }}** on <time datetime="{{ post.date_posted.isoformat() }}">{{ post.date_posted.strftime('%B %d, %Y') }}</time>
+                        Posted by <strong>{{ post.post_author.username }}</strong> on <time datetime="{{ post.date_posted.isoformat() }}">{{ post.date_posted.strftime('%B %d, %Y') }}</time>
                     </p>
                 </header>
 

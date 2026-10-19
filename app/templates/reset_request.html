@@ -5,28 +5,29 @@
 {% block title %}Request Password Reset{% endblock %}
 
 {% block content %}
-    <section class="request-reset-container" style="max-width: 400px; margin: 0 auto; padding: 20px; background: rgba(0, 0, 0, 0.6); border-radius: 10px; box-shadow: 0 5px 15px var(--shadow-color);">
-        <h1>Request Password Reset</h1>
-        <p style="margin-bottom: 20px; color: rgba(255, 255, 255, 0.8);">Enter your account's email address and we will send you instructions to reset your password.</p>
-        <hr>
+    <section class="auth-card-container">
+        <h1>Reset Password</h1>
+        <p class="auth-subtitle">Enter your account's email address and we will send you instructions to reset your password.</p>
         
         <form method="POST" action="{{ url_for('auth.reset_request') }}">
             {{ form.hidden_tag() }}
 
             <div class="form-group">
                 {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-input", placeholder="Enter your email address") }}
+                {{ form.email(class="form-input", placeholder="name@example.com", autocomplete="email") }}
                 {% for error in form.email.errors %}
                     <span class="error">[{{ error }}]</span>
                 {% endfor %}
             </div>
 
-            <div class="form-actions" style="margin-top: 25px;">
-                {{ form.submit(class="btn btn-primary") }}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Send Reset Instructions
+                </button>
             </div>
             
-            <p style="text-align: center; margin-top: 15px;">
-                <a href="{{ url_for('auth.login') }}">Back to Login</a>
+            <p class="auth-switch-link" style="margin-top: 18px;">
+                <a href="{{ url_for('auth.login') }}">&larr; Back to Login</a>
             </p>
         </form>
     </section>

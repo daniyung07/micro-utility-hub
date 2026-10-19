@@ -5,23 +5,24 @@
 {% block title %}My To-Do List{% endblock %}
 
 {% block content %}
-    <section class="tasks-list-container">
-        <h1>My Tasks</h1>
+        <div class="index-header-bar">
+            <h1>My Tasks</h1>
+            <a class="form-create" href="{{ url_for('tasks.new_task') }}">+ New Task</a>
+        </div>
         <hr>
 
-        <p><a class="form-create" href="{{ url_for('tasks.new_task') }}">Add a New Task</a></p>
-
         {% if user_tasks %}
-            <table class="tasks-table">
-                <caption>Your Personal To-Do List</caption>
-                <thead>
-                    <tr>
-                        <th class="done-col">Done</th>
-                        <th class="title-col">Task Title</th>
-                        <th class="details-col">Details</th>
-                        <th class="actions-col">Actions</th>
-                    </tr>
-                </thead>
+            <div class="table-responsive">
+                <table class="tasks-table">
+                    <caption>Your Personal To-Do List</caption>
+                    <thead>
+                        <tr>
+                            <th class="done-col">Done</th>
+                            <th class="title-col">Task Title</th>
+                            <th class="details-col">Details</th>
+                            <th class="actions-col">Actions</th>
+                        </tr>
+                    </thead>
                 <tbody>
                 {% for task in user_tasks %}
                     <tr class="{% if task.completed %}completed{% endif %}">
@@ -57,8 +58,11 @@
                 {% endfor %}
                 </tbody>
             </table>
+        </div>
         {% else %}
-            <p class="no-tasks">You have no tasks! Start by adding one above.</p>
+            <div class="empty-state-card">
+                <p>You have no active tasks! <a href="{{ url_for('tasks.new_task') }}">Create your first task</a> to get started.</p>
+            </div>
         {% endif %}
     </section>
 {% endblock %}

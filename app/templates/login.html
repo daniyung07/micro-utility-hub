@@ -12,8 +12,7 @@
 
             <div class="form-group">
                 {{ form.email.label(class="form-label") }}
-                {# Added placeholder #}
-                {{ form.email(class="form-input", placeholder="Enter your email") }}
+                {{ form.email(class="form-input", placeholder="name@example.com", autocomplete="email") }}
                 {% for error in form.email.errors %}
                     <span class="error">[{{ error }}]</span>
                 {% endfor %}
@@ -21,9 +20,9 @@
 
             <div class="form-group">
                 {{ form.password.label(class="form-label") }}
-                <div style="position: relative;">
-                    {{ form.password(class="form-input", id="login-password-field", placeholder="Enter password") }}
-                    <span class="password-toggle" data-target="login-password-field">👁️</span>
+                <div class="input-with-icon">
+                    {{ form.password(class="form-input", id="login-password-field", placeholder="Enter your account password", autocomplete="current-password") }}
+                    <button type="button" class="password-toggle" data-target="login-password-field" aria-label="Toggle password visibility">👁️</button>
                 </div>
                 {% for error in form.password.errors %}
                     <span class="error">[{{ error }}]</span>
@@ -31,16 +30,16 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    Login
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Log In
                 </button>
             </div>
 
-            <p class="forgot-password-link" style="text-align: center; margin-top: 15px;">
-                <a href="{{ url_for('auth.reset_request') }}">Forgot Password?</a>
+            <p class="auth-switch-link" style="margin-top: 18px;">
+                <a href="{{ url_for('auth.reset_request') }}">Forgot your password?</a>
             </p>
-            <p class="register-link" style="text-align: center; margin-top: 10px;"> {# Adjusted margin #}
-                Don't have an account? <a href="{{ url_for('auth.register') }}">Sign up here</a>
+            <p class="auth-switch-link" style="margin-top: 8px;">
+                Don't have an account? <a href="{{ url_for('auth.register') }}">Create an account</a>
             </p>
         </form>
     </section>

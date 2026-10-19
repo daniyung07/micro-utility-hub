@@ -15,15 +15,16 @@
 
             <div class="form-group">
                 {{ form.original_url.label(class="form-label") }}
-                {{ form.original_url(class="form-input", placeholder="e.g., https://www.yourlongaddress.com") }}
+                {{ form.original_url(class="form-input", placeholder="https://example.com/very/long/destination/link") }}
 
                 {% for error in form.original_url.errors %}
-                    <span class="error" style="color: red;">[{{ error }}]</span>
+                    <span class="error">[{{ error }}]</span>
                 {% endfor %}
             </div>
 
-            <div class="form-actions">
+            <div class="form-actions" style="display: flex; gap: 12px; align-items: center;">
                 {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('shortener.index') }}" class="btn btn-secondary">View My Links</a>
             </div>
         </form>
     </section>

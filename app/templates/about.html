@@ -5,19 +5,19 @@
 {% block title %}About This Project{% endblock %}
 
 {% block content %}
-    <main class="about-container">
-        <h1>About the Micro-Utility Hub</h1>
+    <section class="about-container">
+        <h1>About Micro-Utility Hub</h1>
+        <p class="about-lead">A unified productivity workspace providing essential daily developer and personal micro-tools in one secure place.</p>
+        <hr>
 
-        <p>This application is a demonstration of secure, modular, full-stack development using the Flask framework.</p>
-
-        <section>
-            <h2>Technical Features</h2>
-            <ul>
-                <li>**Architecture:** Built using a comprehensive **Blueprint** structure.</li>
-                <li>**Database:** Uses **SQLAlchemy** for secure, object-relational mapping (ORM) across multiple models.</li>
-                <li>**Security:** Implements **Flask-Login** for user sessions and **Flask-WTF** for secure forms and input validation.</li>
-                <li>**Front-End:** Features a dynamic, interactive **HTML5 Canvas Background** for a modern look.</li>
+        <section class="about-features">
+            <h2>Core Architecture & Tech Stack</h2>
+            <ul class="feature-bullets">
+                <li><span class="bullet-tag">Architecture</span> <strong>Modular Blueprint Design:</strong> Separate modular packages for Authentication, Blog & Notes, Tasks, and URL Shortener.</li>
+                <li><span class="bullet-tag">Database</span> <strong>Robust ORM:</strong> High-performance PostgreSQL & SQLite abstraction with SQLAlchemy 2.0 and automated database migrations.</li>
+                <li><span class="bullet-tag">Security</span> <strong>Session Protection:</strong> Strict session validation, hashed passwords via Werkzeug, and CSRF protection via Flask-WTF.</li>
+                <li><span class="bullet-tag">UI/UX</span> <strong>Adaptive Design:</strong> Ultra-responsive mobile drawer, interactive image cropper, theme switching, and hardware-accelerated ambient visuals.</li>
             </ul>
         </section>
-    </main>
+    </section>
 {% endblock %}

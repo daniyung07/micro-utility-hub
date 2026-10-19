@@ -22,8 +22,7 @@
 
             <div class="form-group">
                 {{ form.username.label(class="form-label") }}
-                {# FIX: Add explicit value attribute #}
-                {{ form.username(class="form-input", value=current_user.username) }}
+                {{ form.username(class="form-input", placeholder="Your username", value=current_user.username) }}
                 {% for error in form.username.errors %}
                     <span class="error">[{{ error }}]</span>
                 {% endfor %}
@@ -31,8 +30,7 @@
 
             <div class="form-group">
                 {{ form.email.label(class="form-label") }}
-                {# FIX: Add explicit value attribute #}
-                {{ form.email(class="form-input", value=current_user.email) }}
+                {{ form.email(class="form-input", placeholder="name@example.com", value=current_user.email) }}
                 {% for error in form.email.errors %}
                     <span class="error">[{{ error }}]</span>
                 {% endfor %}
@@ -40,14 +38,18 @@
 
             <div class="form-group">
                 {{ form.country.label(class="form-label") }}
-                {# FIX: Add explicit value attribute #}
-                {{ form.country(class="form-input", value=current_user.country or '') }} {# Use 'or ""' for potentially None values #}
+                {{ form.country(class="form-input", placeholder="e.g. United States, Germany, Japan", value=current_user.country or '') }}
+                {% for error in form.country.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
             </div>
 
             <div class="form-group">
                 {{ form.state.label(class="form-label") }}
-                {# FIX: Add explicit value attribute #}
-                {{ form.state(class="form-input", value=current_user.state or '') }} {# Use 'or ""' for potentially None values #}
+                {{ form.state(class="form-input", placeholder="e.g. California, Bavaria, Tokyo", value=current_user.state or '') }}
+                {% for error in form.state.errors %}
+                    <span class="error">[{{ error }}]</span>
+                {% endfor %}
             </div>
 
             {# ... image upload and submit button ... #}

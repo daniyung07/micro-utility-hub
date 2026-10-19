@@ -14,7 +14,7 @@
 
             <div class="form-group">
                 {{ form.title.label(class="form-label") }}
-                {{ form.title(class="form-input") }}
+                {{ form.title(class="form-input", placeholder="Enter an informative post title...") }}
                 {% for error in form.title.errors %}
                     <span class="error">[{{ error }}]</span>
                 {% endfor %}
@@ -22,14 +22,15 @@
 
             <div class="form-group">
                 {{ form.content.label(class="form-label") }}
-                {{ form.content(class="form-input", rows=10) }}
+                {{ form.content(class="form-input", rows=10, placeholder="Write your post content, ideas, or documentation here...") }}
                 {% for error in form.content.errors %}
                     <span class="error">[{{ error }}]</span>
                 {% endfor %}
             </div>
 
-            <div class="form-actions">
+            <div class="form-actions" style="display: flex; gap: 12px; align-items: center;">
                 {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('blog.blog_index') }}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </section>

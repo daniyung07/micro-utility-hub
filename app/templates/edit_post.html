@@ -13,7 +13,7 @@
 
         <div class="form-group">
             {{ form.title.label(class="form-label") }}
-            {{ form.title(class="form-input") }}
+            {{ form.title(class="form-input", placeholder="Enter post title...") }}
             {% for error in form.title.errors %}
                 <span class="error">{{ error }}</span>
             {% endfor %}
@@ -21,7 +21,7 @@
 
         <div class="form-group">
             {{ form.content.label(class="form-label") }}
-            {{ form.content(class="form-input", rows=10) }}
+            {{ form.content(class="form-input", rows=10, placeholder="Write your post content here...") }}
             {% for error in form.content.errors %}
                 <span class="error">{{ error }}</span>
             {% endfor %}
